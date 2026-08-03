@@ -50,3 +50,4 @@ Legend: **Supported** · **Partial** · **Unsupported** · **API-fallback** (HA 
 |------|----------|
 | Test corpus | `Compatibility/`, `Fixtures/`, `Tests/*` |
 | CompareDemo | `Examples/CompareDemo` + `Docs/screenshots/` |
+| Upstream process | `Docs/COMPAT.md`, `Compatibility/TRACKED_DIFFERENCES.md`, `Scripts/check-compat-notes.sh` |

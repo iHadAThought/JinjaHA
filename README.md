@@ -135,6 +135,7 @@ swift run CompareDemo
 
 ```bash
 swift test
+Scripts/check-compat-notes.sh
 ```
 
 Optional live parity (compares local vs HA API):
@@ -142,6 +143,10 @@ Optional live parity (compares local vs HA API):
 ```bash
 HA_URL=https://homeassistant.local:8123 HA_TOKEN=xxxxx swift test --filter LiveParityTests
 ```
+
+## Upstream compatibility
+
+See [`Docs/COMPAT.md`](Docs/COMPAT.md) and [`Compatibility/TRACKED_DIFFERENCES.md`](Compatibility/TRACKED_DIFFERENCES.md). When Pallets Jinja or HA template functions change: add failing goldens under `Compatibility/`, implement, then bump **Last reviewed**.
 
 ## License
 

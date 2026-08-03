@@ -47,6 +47,12 @@ swift run CompareDemo --export-screenshots Docs/screenshots
 
 macOS side-by-side: native `HATemplateEngine` output vs `HATemplateText` / `HATemplateMarkdown`.
 
+## Upstream process (Phase 7)
+
+- [`Docs/COMPAT.md`](../../Docs/COMPAT.md) — absorb Jinja/HA changes; 90-day review cadence
+- [`Compatibility/TRACKED_DIFFERENCES.md`](../../Compatibility/TRACKED_DIFFERENCES.md)
+- `Scripts/check-compat-notes.sh` — fails if Last reviewed is stale
+
 
 ## Environment merge
 

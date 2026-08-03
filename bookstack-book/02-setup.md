@@ -25,6 +25,7 @@ swift test
 swift run MinimalRender
 swift run CompareDemo
 swift run CompareDemo --export-screenshots Docs/screenshots
+Scripts/check-compat-notes.sh
 ```
 
 ## Quick render

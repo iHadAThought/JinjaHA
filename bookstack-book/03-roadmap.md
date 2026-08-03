@@ -9,6 +9,8 @@
 | 4 HA helpers | Done | `iif`, `is_number`, `slugify`, `average`, regex, `floor_entities`, labels overload |
 | 5 Tests corpus | Done | JinjaCore/HA/SwiftUI breadth + Compatibility/ goldens |
 | 6 CompareDemo | Done | Side-by-side demo + `Docs/screenshots/` |
-| 7 Upstream process | Next | COMPAT tracking routine polish |
+| 7 Upstream process | Done | COMPAT cadence, tracked differences, `check-compat-notes.sh` |
+
+All planned build phases complete. Ongoing work: grow Compatibility goldens as upstream releases land.
 
 See also `Docs/FEATURES.md` and `Docs/COMPAT.md` in the repo.

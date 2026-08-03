@@ -5,9 +5,9 @@ Working notes for the JinjaHA project.
 ## 2026-08-02
 
 - Created Forgejo repo `Brendan/JinjaHA` and pushed `master`.
-- Phase 0–6 complete: engine, helpers, test corpus, CompareDemo + screenshots.
-- Safe `range` is registered via env override (no preprocess).
-- Next: Phase 7 upstream COMPAT process polish.
+- Phase 0–7 complete: engine, helpers, corpus, CompareDemo, COMPAT upstream process.
+- Re-check Pallets/HA docs ≤ every 90 days (`Scripts/check-compat-notes.sh`).
+- Track intentional divergences in `Compatibility/TRACKED_DIFFERENCES.md`.
 
 ## Security reminders
 
