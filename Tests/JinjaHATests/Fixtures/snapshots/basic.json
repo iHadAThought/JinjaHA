@@ -1,0 +1,38 @@
+[
+  {
+    "entity_id": "sensor.outdoor_temperature",
+    "state": "21.5",
+    "attributes": {
+      "unit_of_measurement": "°C",
+      "friendly_name": "Outdoor Temperature"
+    }
+  },
+  {
+    "entity_id": "light.kitchen",
+    "state": "on",
+    "attributes": {
+      "brightness": 180,
+      "friendly_name": "Kitchen Light",
+      "area_id": "kitchen"
+    }
+  },
+  {
+    "entity_id": "binary_sensor.front_door",
+    "state": "off",
+    "attributes": {
+      "device_class": "door"
+    }
+  },
+  {
+    "entity_id": "group.lights",
+    "state": "on",
+    "attributes": {
+      "entity_id": ["light.kitchen", "light.missing"]
+    }
+  },
+  {
+    "entity_id": "sensor.missing_like",
+    "state": "unknown",
+    "attributes": {}
+  }
+]

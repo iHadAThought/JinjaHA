@@ -1,0 +1,1 @@
+{{ states('sensor.outdoor_temperature') }}|{{ states('sensor.does_not_exist') }}|{{ is_state('light.kitchen', 'on') }}|{{ has_value('sensor.missing_like') }}
