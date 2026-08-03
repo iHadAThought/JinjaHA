@@ -80,3 +80,11 @@ Source of truth: [HA template functions](https://www.home-assistant.io/template-
 1. **Library completeness:** Implement documented HA template helpers and needed Jinja statements in-process so hybrid apps stay thin.
 2. **Permanent API-fallback:** HACS integrations, custom Jinja packages, arbitrary Python object methods, and a full CPython sandbox stay on `FallbackTemplateRenderer` / `POST /api/template` (TD-009).
 3. **Validation:** Compatibility goldens + LiveParity + real Lovelace boards (e.g. Work Audit) verify behavior; the HA template-functions catalog drives the backlog.
+
+### Cheat sheet
+
+| Bucket | Meaning | Examples |
+|--------|---------|----------|
+| **Supported** | Local JinjaHA/JinjaCore | Documented HA helpers in the matrix above |
+| **Partial** | Useful subset; deepen when LiveParity/boards fail | Complex `pack` formats, niche datetime edges |
+| **API-fallback** | Never in-process | HACS, custom Jinja packages, arbitrary Python/CPython |

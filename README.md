@@ -20,7 +20,7 @@ The Jinja2 runtime is **owned** as `JinjaCore` (vendored baseline from huggingfa
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/iHadAThought/JinjaHA.git", from: "0.2.0")
+    .package(url: "https://github.com/iHadAThought/JinjaHA.git", from: "0.3.0")
 ]
 ```
 

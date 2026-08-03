@@ -57,4 +57,32 @@ final class HAStateHelperTests: XCTestCase {
         let output = try engine.render("{{ time_since(1699996400) }}")
         XCTAssertTrue(output.contains("hour") || output.contains("minute") || output.contains("second"))
     }
+
+    func testSnapshotMergeAndRegistryDecode() throws {
+        let base = HAStateSnapshot(entities: [
+            "sensor.temp": HAEntityState(entityID: "sensor.temp", state: "22")
+        ])
+        let metaJSON = Data("""
+        [{"entity_id":"sensor.temp","platform":"mqtt","config_entry_id":"e1","hidden_by":"user","name":"Temp"}]
+        """.utf8)
+        let entriesJSON = Data("""
+        [{"entry_id":"e1","domain":"mqtt","title":"MQTT"}]
+        """.utf8)
+        let snapshot = try base
+            .merging(entityMeta: HAStateSnapshot.entityMetaFromRegistryJSON(metaJSON))
+            .merging(configEntries: HAStateSnapshot.configEntriesFromJSON(entriesJSON))
+            .merging(repairIssues: [
+                HARepairIssue(domain: "mqtt", issueID: "bad", severity: "warning")
+            ])
+            .withHomeLocation(latitude: 1, longitude: 2)
+
+        XCTAssertEqual(snapshot.entityMeta["sensor.temp"]?.hidden, true)
+        XCTAssertEqual(snapshot.configEntries["e1"]?.domain, "mqtt")
+        XCTAssertEqual(snapshot.repairIssues.count, 1)
+        XCTAssertEqual(snapshot.latitude, 1)
+
+        let engine = HATemplateEngine(snapshot: snapshot)
+        XCTAssertEqual(try engine.render("{{ is_hidden_entity('sensor.temp') }}"), "true")
+        XCTAssertEqual(try engine.render("{{ config_entry_attr('e1', 'domain') }}"), "mqtt")
+    }
 }

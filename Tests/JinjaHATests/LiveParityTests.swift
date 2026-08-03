@@ -41,6 +41,38 @@ final class LiveParityTests: XCTestCase {
         }
     }
 
+    func testHelperCatalogStripLocalMatchesAPIWhenConfigured() async throws {
+        guard let urlString = ProcessInfo.processInfo.environment["HA_URL"],
+              let token = ProcessInfo.processInfo.environment["HA_TOKEN"],
+              let baseURL = URL(string: urlString),
+              !token.isEmpty
+        else {
+            throw XCTSkip("Set HA_URL and HA_TOKEN to run live parity tests")
+        }
+
+        let snapshot: HAStateSnapshot
+        if let liveData = try? await Self.fetchStatesJSON(baseURL: baseURL, token: token),
+           let live = try? HAStateSnapshot.fromStatesJSON(liveData)
+        {
+            snapshot = live
+        } else {
+            snapshot = HAStateSnapshot()
+        }
+
+        let local = LocalTemplateRenderer(snapshot: snapshot)
+        let api = HAAPITemplateRenderer(baseURL: baseURL, token: token)
+        let strip = """
+        {{ tau }}|{{ clamp(12, 0, 10) }}|{{ wrap(12, 0, 10) }}|{{ remap(50, 0, 100, 0, 10) }}|{{ bool('yes') }}|{{ '2' | add(3) }}|{{ 1 | ordinal }}|{{ version('2024.12') >= '2024.1' }}|{{ statistical_mode([1,2,2]) }}
+        """
+        let apiResult = try await api.render(strip)
+        let localResult = try await local.render(strip)
+        XCTAssertEqual(
+            Self.normalizeParity(localResult),
+            Self.normalizeParity(apiResult),
+            "Helper catalog strip mismatch"
+        )
+    }
+
     private static func fetchStatesJSON(baseURL: URL, token: String) async throws -> Data {
         guard var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
             throw HATemplateError.invalidURL

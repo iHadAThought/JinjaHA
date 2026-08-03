@@ -3,7 +3,7 @@ import JinjaHA
 
 @main
 struct MinimalRender {
-    static func main() throws {
+    static func main() async throws {
         let snapshot = HAStateSnapshot(
             entities: [
                 "sensor.outdoor_temperature": HAEntityState(
@@ -24,15 +24,25 @@ struct MinimalRender {
             now: Date(timeIntervalSince1970: 1_700_000_000)
         )
 
-        let engine = HATemplateEngine(snapshot: snapshot)
         let template = """
         Outdoor: {{ states('sensor.outdoor_temperature', with_unit=true) }}
         {% if is_state('light.kitchen', 'on') %}
         Kitchen light is on (brightness {{ state_attr('light.kitchen', 'brightness') }}).
         {% endif %}
+        tau={{ tau }} ordinal={{ 1 | ordinal }}
         """
 
-        let output = try engine.render(template)
-        print(output)
+        let local = LocalTemplateRenderer(snapshot: snapshot)
+        if let urlString = ProcessInfo.processInfo.environment["HA_URL"],
+           let token = ProcessInfo.processInfo.environment["HA_TOKEN"],
+           let baseURL = URL(string: urlString),
+           !token.isEmpty
+        {
+            let api = HAAPITemplateRenderer(baseURL: baseURL, token: token)
+            let hybrid = FallbackTemplateRenderer(primary: local, fallback: api)
+            print(try await hybrid.render(template))
+        } else {
+            print(try await local.render(template))
+        }
     }
 }
