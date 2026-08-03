@@ -1,5 +1,5 @@
 import Foundation
-import Jinja
+import JinjaCore
 
 /// Backend-agnostic async template renderer.
 public protocol TemplateRendering: Sendable {

@@ -1,0 +1,9 @@
+JinjaHA
+Copyright 2026 JinjaHA Contributors
+
+This product includes software derived from huggingface/swift-jinja
+(https://github.com/huggingface/swift-jinja), Copyright Hugging Face and
+contributors, licensed under the Apache License, Version 2.0.
+
+See Sources/JinjaCore/LICENSE.upstream for the full Apache-2.0 text applicable
+to the vendored engine sources now maintained as JinjaCore.

@@ -4,11 +4,14 @@ Swift library for evaluating **Home Assistant Jinja2** templates on Apple platfo
 
 Use it in apps that connect to Home Assistant and render Lovelace dashboards (iOS, tvOS, macOS, watchOS).
 
+The Jinja2 runtime is **owned** as `JinjaCore` (vendored baseline from huggingface/swift-jinja 2.4.2, Apache-2.0 — see `NOTICE`). There is no runtime dependency on huggingface. See [`Docs/COMPAT.md`](Docs/COMPAT.md) and [`Docs/FEATURES.md`](Docs/FEATURES.md).
+
 ## Products
 
 | Product | Purpose |
 |---------|---------|
-| **JinjaHA** | Jinja2 engine (via [huggingface/swift-jinja](https://github.com/huggingface/swift-jinja)) + HA helpers + REST `/api/template` client |
+| **JinjaCore** | Owned Jinja2 engine (lexer/parser/runtime, registries, loader, attribute policy) |
+| **JinjaHA** | HA snapshot helpers + REST `/api/template` client on top of JinjaCore |
 | **JinjaHASwiftUI** | `HATemplateText` / `HATemplateMarkdown` with last-good-render semantics |
 
 ## Install

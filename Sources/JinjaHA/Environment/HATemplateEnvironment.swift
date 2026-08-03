@@ -1,5 +1,5 @@
 import Foundation
-import Jinja
+import JinjaCore
 
 /// Builds a Jinja ``Environment`` populated with Home Assistant helpers.
 public struct HATemplateEnvironment: Sendable {
@@ -33,8 +33,7 @@ public struct HATemplateEnvironment: Sendable {
 
     /// Rewrites HA callable/filter `states` into `__states__` while keeping
     /// dotted `states.domain.object` access on the nested object.
-    /// Also rewrites `range(` to `__safe_range__(` because swift-jinja re-injects
-    /// built-in globals when cloning environments, which would clobber overrides.
+    /// (`range` overrides use Environment merge — no preprocess needed after Phase 1.)
     public static func preprocess(_ source: String) -> String {
         var result = ""
         result.reserveCapacity(source.count)
@@ -46,34 +45,10 @@ public struct HATemplateEnvironment: Sendable {
                 index += "states".count
                 continue
             }
-            if matchesWordCall(scalars, at: index, word: "range") {
-                result.append("__safe_range__")
-                index += "range".count
-                continue
-            }
             result.append(scalars[index])
             index += 1
         }
         return result
-    }
-
-    private static func matchesWordCall(_ scalars: [Character], at index: Int, word: String) -> Bool {
-        let chars = Array(word)
-        guard index + chars.count <= scalars.count else { return false }
-        if index > 0 {
-            let prev = scalars[index - 1]
-            if prev.isLetter || prev.isNumber || prev == "_" || prev == "." {
-                return false
-            }
-        }
-        for (offset, char) in chars.enumerated() {
-            if scalars[index + offset] != char { return false }
-        }
-        var cursor = index + chars.count
-        while cursor < scalars.count, scalars[cursor].isWhitespace {
-            cursor += 1
-        }
-        return cursor < scalars.count && scalars[cursor] == "("
     }
 
     private static func matchesStatesCallOrFilter(_ scalars: [Character], at index: Int) -> Bool {

@@ -1,5 +1,5 @@
 import Foundation
-import Jinja
+import JinjaCore
 
 /// Local Home Assistant Jinja template engine.
 public struct HATemplateEngine: Sendable {

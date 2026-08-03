@@ -1,5 +1,5 @@
 import Foundation
-import Jinja
+import JinjaCore
 
 enum HAGlobals {
     static func register(into env: Environment, snapshot: HAStateSnapshot, limits: HATemplateLimits) {
@@ -50,8 +50,8 @@ enum HAGlobals {
         env["label_devices"] = .function(makeLabelDevices(snapshot: snapshot))
         env["label_areas"] = .function(makeLabelAreas(snapshot: snapshot))
 
-        // Safer range with hard cap (see preprocess → `__safe_range__`).
-        env["__safe_range__"] = .function(makeSafeRange(limits: limits))
+        // Safer range with hard cap — overrides built-in via env merge (Phase 1).
+        env.registerGlobal("range", .function(makeSafeRange(limits: limits)))
     }
 
     // MARK: - States

@@ -1,5 +1,5 @@
 import Foundation
-import Jinja
+import JinjaCore
 
 /// A Home Assistant entity state suitable for template evaluation.
 public struct HAEntityState: Sendable, Hashable, Codable {

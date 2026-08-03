@@ -1,5 +1,5 @@
 {
-  "originHash" : "f6c04f5565afdfe0c471c99ec4ed55794ddb253fffc294a6a58780c387b7b609",
+  "originHash" : "fe46e735e5a8e26135c29eb71f84115d940ac152b35eb0ca39cfa3e20b3b7cb5",
   "pins" : [
     {
       "identity" : "swift-collections",
@@ -8,15 +8,6 @@
       "state" : {
         "revision" : "a0cb0954ecb21e4e31b0070e6ed5674e8556685a",
         "version" : "1.6.0"
-      }
-    },
-    {
-      "identity" : "swift-jinja",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/huggingface/swift-jinja.git",
-      "state" : {
-        "revision" : "7d0b8880ef8e567dd4e0089f8b99fb354129017c",
-        "version" : "2.4.2"
       }
     }
   ],

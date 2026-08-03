@@ -10,19 +10,25 @@ let package = Package(
         .watchOS(.v10),
     ],
     products: [
+        .library(name: "JinjaCore", targets: ["JinjaCore"]),
         .library(name: "JinjaHA", targets: ["JinjaHA"]),
         .library(name: "JinjaHASwiftUI", targets: ["JinjaHASwiftUI"]),
         .executable(name: "MinimalRender", targets: ["MinimalRender"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/huggingface/swift-jinja.git", from: "2.4.0"),
+        .package(url: "https://github.com/apple/swift-collections.git", from: "1.0.0"),
     ],
     targets: [
         .target(
-            name: "JinjaHA",
+            name: "JinjaCore",
             dependencies: [
-                .product(name: "Jinja", package: "swift-jinja"),
-            ]
+                .product(name: "OrderedCollections", package: "swift-collections"),
+            ],
+            exclude: ["LICENSE.upstream"]
+        ),
+        .target(
+            name: "JinjaHA",
+            dependencies: ["JinjaCore"]
         ),
         .target(
             name: "JinjaHASwiftUI",
@@ -34,8 +40,12 @@ let package = Package(
             path: "Examples/MinimalRender"
         ),
         .testTarget(
+            name: "JinjaCoreTests",
+            dependencies: ["JinjaCore"]
+        ),
+        .testTarget(
             name: "JinjaHATests",
-            dependencies: ["JinjaHA"],
+            dependencies: ["JinjaHA", "JinjaCore"],
             resources: [
                 .copy("Fixtures"),
             ]

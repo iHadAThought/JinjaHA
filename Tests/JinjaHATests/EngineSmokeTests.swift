@@ -1,4 +1,4 @@
-import Jinja
+import JinjaCore
 import JinjaHA
 import XCTest
 

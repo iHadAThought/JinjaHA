@@ -1,5 +1,5 @@
 import Foundation
-import Jinja
+import JinjaCore
 
 enum HAFilters {
     static func register(into env: Environment) {
