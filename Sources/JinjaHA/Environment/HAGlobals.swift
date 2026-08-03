@@ -3,8 +3,9 @@ import JinjaCore
 
 enum HAGlobals {
     static func register(into env: Environment, snapshot: HAStateSnapshot, limits: HATemplateLimits) {
-        env["__states__"] = .function(makeStatesFunction(snapshot: snapshot))
-        env["states"] = makeStatesObject(snapshot: snapshot)
+        let statesFn = makeStatesFunction(snapshot: snapshot)
+        env["states"] = makeStatesObject(snapshot: snapshot, call: statesFn)
+        env.registerFilter("states", statesFn)
         env["is_state"] = .function(makeIsState(snapshot: snapshot))
         env["is_state_attr"] = .function(makeIsStateAttr(snapshot: snapshot))
         env["state_attr"] = .function(makeStateAttr(snapshot: snapshot))
@@ -81,23 +82,22 @@ enum HAGlobals {
         }
     }
 
-    private static func makeStatesObject(snapshot: HAStateSnapshot) -> Value {
+    private static func makeStatesObject(
+        snapshot: HAStateSnapshot,
+        call: @escaping JinjaFunction
+    ) -> Value {
         var byDomain = OrderedDictionary<ObjectKey, Value>()
         let grouped = Dictionary(grouping: snapshot.entities.values, by: \.domain)
         for domain in grouped.keys.sorted() {
             var entities = OrderedDictionary<ObjectKey, Value>()
             for entity in grouped[domain]!.sorted(by: { $0.objectID < $1.objectID }) {
-                // Store state string at leaf so `{{ states.sensor.temp }}` prints the state.
-                // Nested attributes remain available via a companion object under `__entity__`
-                // is awkward — instead attach common fields as object and rely on `.state`.
-                // Prefer object with CustomStringConvertible limitation: use object.
                 if let value = try? entity.asJinjaValue() {
                     entities[.string(entity.objectID)] = value
                 }
             }
             byDomain[.string(domain)] = .object(entities)
         }
-        return .object(byDomain)
+        return .object(byDomain, call: call)
     }
 
     private static func makeIsState(snapshot: HAStateSnapshot) -> @Sendable ([Value], [String: Value], Environment) throws -> Value {
@@ -169,12 +169,12 @@ enum HAGlobals {
                     for value in values {
                         if case .string(let id) = value {
                             entityIDs.append(contentsOf: expandOne(id, snapshot: snapshot))
-                        } else if case .object(let obj) = value,
+                        } else if case .object(let obj, _, _) = value,
                                   case .string(let id) = obj[.string("entity_id")] {
                             entityIDs.append(contentsOf: expandOne(id, snapshot: snapshot))
                         }
                     }
-                case .object(let obj):
+                case .object(let obj, _, _):
                     if case .string(let id) = obj[.string("entity_id")] {
                         entityIDs.append(contentsOf: expandOne(id, snapshot: snapshot))
                     }

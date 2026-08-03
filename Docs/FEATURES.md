@@ -18,13 +18,16 @@ Legend: **Supported** · **Partial** · **Unsupported** · **API-fallback** (HA 
 | `{% include %}` | Supported | Phase 2 — `ignore missing`, `with`/`without context` |
 | `{% extends %}` / `{% block %}` / `super()` | Supported | Phase 2 — child overrides via loader |
 | `{% import %}` / `{% from ... import %}` | Supported | Phase 2 — macros into namespace or aliases |
-| Callable objects | Unsupported | Phase 3 |
+| Callable objects | Supported | Phase 3 — `Value.object(..., call:)` |
+| Custom object stringify | Supported | Phase 3 — `stringRepresentation` |
 
 ## JinjaHA
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| `states()` / `is_state` / `state_attr` / `has_value` / `expand` | Supported | |
+| `states()` / `is_state` / `state_attr` / `has_value` / `expand` | Supported | Callable object — no preprocess |
+| `\| states` filter | Supported | Same function as `states(...)` |
+| `states.domain.object` + print → state | Supported | Entity `stringRepresentation` |
 | Areas / devices / floors / labels | Partial | More helpers planned |
 | Datetime helpers | Partial | ISO/numeric shims |
 | `POST /api/template` | Supported | |

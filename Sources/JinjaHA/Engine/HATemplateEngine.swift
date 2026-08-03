@@ -29,10 +29,9 @@ public struct HATemplateEngine: Sendable {
             throw HATemplateError.templateTooLarge(limit: limits.maxTemplateBytes, actual: byteCount)
         }
 
-        let source = HATemplateEnvironment.preprocess(template)
         let compiled: Template
         do {
-            compiled = try Template(source, with: environment.templateOptions)
+            compiled = try Template(template, with: environment.templateOptions)
         } catch {
             throw HATemplateError.jinja(String(describing: error))
         }

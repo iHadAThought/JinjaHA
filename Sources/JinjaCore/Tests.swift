@@ -339,7 +339,7 @@ public enum Tests {
         )
 
         guard let input = arguments["value"] else { return false }
-        return input.isFunction || input.isMacro
+        return input.isCallable
     }
 
     /// Tests if the input is an integer.
@@ -557,7 +557,7 @@ public enum Tests {
                 return str.contains(searchStr)
             }
             return false
-        case let .object(dict):
+        case let .object(dict, _, _):
             if let key = ObjectKey(input) {
                 return dict[key] != nil
             }

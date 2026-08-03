@@ -7,7 +7,7 @@
 | Jinja dialect | 3.1.x (Pallets) |
 | `JinjaCoreInfo.dialectVersion` | 3.1 |
 | Vendored baseline | huggingface/swift-jinja 2.4.2 (owned thereafter) |
-| Last reviewed | 2026-08-02 (Phase 2 statements) |
+| Last reviewed | 2026-08-02 (Phase 3 value model) |
 
 ## Intentional differences from CPython Jinja2
 
@@ -16,6 +16,7 @@
 - HA helpers live in **JinjaHA**, not JinjaCore.
 - Implicit concatenation applies to adjacent **string literals** only (`'a' "b"`), not identifiers — so statement modifiers (`as`, `ignore missing`, `without context`) are not swallowed.
 - `{% include %}` / `{% extends %}` / import require an explicit `TemplateLoader` (default deny-all).
+- Objects may carry an optional `call` hook and `stringRepresentation` (HA `states` dual-use / entity print).
 
 ## How to absorb a future Jinja release
 

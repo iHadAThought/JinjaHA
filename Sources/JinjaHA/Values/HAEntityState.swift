@@ -75,7 +75,9 @@ public struct HAEntityState: Sendable, Hashable, Codable {
         if let lastUpdated {
             dict[.string("last_updated")] = .string(ISO8601DateFormatter().string(from: lastUpdated))
         }
-        return .object(dict)
+        // HA: `{{ states.domain.object }}` prints the state string while still
+        // allowing `.state` / `.attributes` member access.
+        return .object(dict, stringRepresentation: state)
     }
 }
 

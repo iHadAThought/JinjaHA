@@ -24,7 +24,7 @@ public enum PropertyMembers {
         switch object {
         case let .string(str):
             return try evaluateStringProperty(str, propertyName)
-        case let .object(obj):
+        case let .object(obj, _, _):
             return try evaluateObjectProperty(obj, propertyName)
         default:
             return .undefined

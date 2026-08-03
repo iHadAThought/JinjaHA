@@ -18,7 +18,8 @@ enum HAFilters {
             let json = try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
             return try Value(any: json)
         }
-        // Filter form `{{ entity_id | states }}` is rewritten to `| __states__` in preprocess.
+        // Filter form `{{ entity_id | states }}` uses the registered `states` filter
+        // (same function as callable `states(...)`).
         env["is_defined"] = .function { args, _, _ in
             guard let first = args.first else { return .boolean(false) }
             return .boolean(!first.isUndefined && !first.isNull)

@@ -397,6 +397,8 @@ public enum Interpreter {
                     keywordArguments: kwargs,
                     env: env
                 )
+            case .object(_, let call?, _):
+                return try call(argValues, kwargs, env)
             default:
                 throw JinjaError.runtime("Cannot call non-function value")
             }
@@ -471,7 +473,7 @@ public enum Interpreter {
                     }
                 }
 
-            case let .object(dict):
+            case let .object(dict, _, _):
                 if dict.isEmpty {
                     for node in elseBody { try interpretNode(node, env: env, into: &buffer) }
                 } else {
@@ -609,6 +611,9 @@ public enum Interpreter {
                     keywordArguments: finalKwargs,
                     env: callTimeEnv
                 )
+                buffer.append(result.description)
+            case .object(_, let call?, _):
+                let result = try call(finalArgs, finalKwargs, callTimeEnv)
                 buffer.append(result.description)
             default:
                 throw JinjaError.runtime("Cannot call non-function value")
@@ -806,22 +811,28 @@ public enum Interpreter {
                 guard let key = ObjectKey(propertyValue) else {
                     throw JinjaError.runtime("Computed property key must be a string or integer")
                 }
-                if case var .object(dict) = objectValue {
+                if case .object(var dict, let call, let stringRepresentation) = objectValue {
                     dict[key] = value
                     // Update the object in the environment
                     if case let .identifier(name) = objectExpr {
-                        env.setInChain(name: name, value: .object(dict))
+                        env.setInChain(
+                            name: name,
+                            value: .object(dict, call: call, stringRepresentation: stringRepresentation)
+                        )
                     }
                 }
             } else {
                 guard case let .identifier(propertyName) = propertyExpr else {
                     throw JinjaError.runtime("Property assignment requires identifier")
                 }
-                if case var .object(dict) = objectValue {
+                if case .object(var dict, let call, let stringRepresentation) = objectValue {
                     dict[.string(propertyName)] = value
                     // Update the object in the environment
                     if case let .identifier(name) = objectExpr {
-                        env.setInChain(name: name, value: .object(dict))
+                        env.setInChain(
+                            name: name,
+                            value: .object(dict, call: call, stringRepresentation: stringRepresentation)
+                        )
                     }
                 }
             }
@@ -963,10 +974,10 @@ public enum Interpreter {
             }
             return arr[safeIndex]
 
-        case let (.object(obj), .string(key)):
+        case let (.object(obj, _, _), .string(key)):
             return obj[.string(key)] ?? .undefined
 
-        case let (.object(obj), .int(key)):
+        case let (.object(obj, _, _), .int(key)):
             return obj[.int(key)] ?? .undefined
 
         case let (.string(str), .int(index)):
@@ -1020,6 +1031,9 @@ public enum Interpreter {
         let filterValue = env[filterName]
         if case let .function(fn) = filterValue {
             return try fn(argValues, kwargs, env)
+        }
+        if case let .object(_, call?, _) = filterValue {
+            return try call(argValues, kwargs, env)
         }
 
         if let filterFunction = Filters.builtIn[filterName] {

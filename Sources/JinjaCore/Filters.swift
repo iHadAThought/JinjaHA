@@ -59,7 +59,7 @@ public enum Filters {
             return .int(str.count)
         case let .array(arr):
             return .int(arr.count)
-        case let .object(obj):
+        case let .object(obj, _, _):
             return .int(obj.count)
         case .undefined:
             return .int(0)
@@ -210,7 +210,7 @@ public enum Filters {
             return arr.randomElement() ?? .undefined
         case let .string(str):
             return str.randomElement().map { .string(String($0)) } ?? .undefined
-        case let .object(dict):
+        case let .object(dict, _, _):
             if dict.isEmpty { return .undefined }
             let randomIndex = dict.keys.indices.randomElement()!
             let randomKey = dict.keys[randomIndex]
@@ -633,7 +633,7 @@ public enum Filters {
         kwargs: [String: Value] = [:],
         env: Environment
     ) throws -> Value {
-        guard case let .object(dict) = args.first else {
+        guard case let .object(dict, _, _) = args.first else {
             return .array([])
         }
 
@@ -956,7 +956,7 @@ public enum Filters {
         kwargs: [String: Value] = [:],
         env: Environment
     ) throws -> Value {
-        guard let value = args.first, case let .object(dict) = value else {
+        guard let value = args.first, case let .object(dict, _, _) = value else {
             return .string("")
         }
 
@@ -1286,7 +1286,7 @@ public enum Filters {
             return .array(arr)
         case let .string(str):
             return .array(str.map { .string(String($0)) })
-        case let .object(dict):
+        case let .object(dict, _, _):
             return .array(dict.values.map { $0 })
         default:
             return .array([])
@@ -1538,7 +1538,7 @@ public enum Filters {
         if case let .string(s) = value {
             return .string(s.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")
         }
-        if case .object(let dict) = value {
+        if case .object(let dict, _, _) = value {
             var components = URLComponents()
             components.queryItems = dict.map { key, value in
                 URLQueryItem(name: key.stringValue, value: value.description)
@@ -1793,7 +1793,7 @@ public enum Filters {
             defaults: [:]
         )
 
-        if case let .object(obj) = value {
+        if case let .object(obj, _, _) = value {
             let pairs = obj.map { key, value in
                 Value.array([Value(key), value])
             }
@@ -1826,7 +1826,7 @@ public enum Filters {
                 let items = arr.map { prettyPrint($0, indent: indent + 1) }
                 return "[\n" + items.map { "\(indentString)  \($0)" }.joined(separator: ",\n")
                     + "\n\(indentString)]"
-            case let .object(dict):
+            case let .object(dict, _, _):
                 if dict.isEmpty { return "{}" }
                 let items = dict.map { key, value in
                     "\(indentString)  \"\(key.stringValue)\": \(prettyPrint(value, indent: indent + 1))"
@@ -2116,7 +2116,7 @@ private func resolveAttributeValue(_ item: Value, attribute: Value) throws -> Va
                 return values[index]
             }
             return .undefined
-        case let .object(values):
+        case let .object(values, _, _):
             return values[.int(index)] ?? values[.string(String(index))] ?? .undefined
         default:
             return .undefined

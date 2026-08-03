@@ -83,8 +83,8 @@ HATemplateMarkdown(
 |------|---------|
 | Jinja2 expressions / `if` / `for` / `set` / `macro` / filters / tests | Via swift-jinja |
 | `states()`, `is_state`, `is_state_attr`, `state_attr`, `has_value` | Local |
-| Dotted `states.domain.object` | Local (use `.state` / attributes on the object) |
-| `\| states` filter | Local (preprocessed to `__states__`) |
+| Dotted `states.domain.object` | Local (prints state; use `.state` / attributes on the object) |
+| `\| states` filter | Local (same function as `states(...)`) |
 | `expand`, `selectattr` / `rejectattr` / `map` / `join` | Local (`expand` HA-aware; collection filters via Jinja) |
 | Areas / devices / floors / labels helpers | Local (from `HAStateSnapshot` registries) |
 | Datetime (`now`, `utcnow`, `as_timestamp`, `timedelta`, `time_since`, `today_at`, …) | Local |

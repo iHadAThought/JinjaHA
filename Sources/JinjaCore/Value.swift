@@ -21,7 +21,17 @@ public enum Value: Sendable {
     /// Array containing ordered collection of values.
     case array([Value])
     /// Object containing key-value pairs with preserved insertion order.
-    case object(OrderedDictionary<ObjectKey, Value>)
+    ///
+    /// - Parameters:
+    ///   - call: Optional invoke hook so the same value can be both dotted
+    ///     (`states.light.x`) and called (`states('light.x')`).
+    ///   - stringRepresentation: When set, template output uses this instead of
+    ///     dumping members (HA entity objects print their state string).
+    case object(
+        OrderedDictionary<ObjectKey, Value>,
+        call: JinjaFunction? = nil,
+        stringRepresentation: String? = nil
+    )
     /// Function value that can be called with arguments.
     case function(@Sendable ([Value], [String: Value], Environment) throws -> Value)
     /// Macro value that can be invoked with arguments.
@@ -183,6 +193,15 @@ public enum Value: Sendable {
         return false
     }
 
+    /// Returns `true` if this value can be invoked (`function`, `macro`, or callable object).
+    public var isCallable: Bool {
+        switch self {
+        case .function, .macro: return true
+        case .object(_, let call, _): return call != nil
+        default: return false
+        }
+    }
+
     /// Returns `true` if this value is a macro.
     public var isMacro: Bool {
         if case .macro = self { return true }
@@ -206,7 +225,7 @@ public enum Value: Sendable {
         case .int(let i): i != 0
         case .string(let s): !s.isEmpty
         case .array(let a): !a.isEmpty
-        case .object(let o): !o.isEmpty
+        case .object(let o, _, _): !o.isEmpty
         case .function: true
         case .macro: true
         }
@@ -429,7 +448,7 @@ public enum Value: Sendable {
             guard case let .string(substr) = self else { return false }
             guard !substr.isEmpty else { return true }  // '' in 'abc' -> true
             return str.contains(substr)
-        case let .object(dict):
+        case let .object(dict, _, _):
             guard let key = ObjectKey(self) else { return false }
             return dict.keys.contains(key)
 
@@ -470,7 +489,7 @@ public enum Value: Sendable {
         case let (.array(a), .array(b)):
             guard a.count == b.count else { return false }
             return zip(a, b).allSatisfy { $0.isEquivalent(to: $1) }
-        case let (.object(a), .object(b)):
+        case let (.object(a, _, _), .object(b, _, _)):
             guard a.count == b.count else { return false }
             for ((keyA, valueA), (keyB, valueB)) in zip(a, b) {
                 if keyA != keyB || !valueA.isEquivalent(to: valueB) {
@@ -509,7 +528,8 @@ extension Value: CustomStringConvertible {
                 }
             }
             return "[\(elements.joined(separator: ", "))]"
-        case .object(let o):
+        case .object(let o, _, let stringRepresentation):
+            if let stringRepresentation { return stringRepresentation }
             return "{\(o.map { "\($0.key.description): \($0.value.description)" }.joined(separator: ", "))}"
         case .function: return "[Function]"
         case .macro(let m): return "[Macro \(m.name)]"
@@ -530,7 +550,7 @@ extension Value: Equatable {
         case (.null, .null): return true
         case (.undefined, .undefined): return true
         case let (.array(lhs), .array(rhs)): return lhs == rhs
-        case let (.object(lhs), .object(rhs)): return lhs == rhs
+        case let (.object(lhs, _, _), .object(rhs, _, _)): return lhs == rhs
         case (.function, .function): return false
         case let (.macro(lhs), .macro(rhs)): return lhs == rhs
         default: return false
@@ -551,7 +571,7 @@ extension Value: Hashable {
         case .null: hasher.combine(0)
         case .undefined: hasher.combine(0)
         case let .array(value): hasher.combine(value)
-        case let .object(value): hasher.combine(value)
+        case let .object(value, _, _): hasher.combine(value)
         case .function: hasher.combine(0)
         case .macro(let m): hasher.combine(m)
         }
@@ -563,7 +583,7 @@ extension Value: Hashable {
 extension Value: Encodable {
     public func encode(to encoder: Encoder) throws {
         switch self {
-        case let .object(value):
+        case let .object(value, _, _):
             var keyedContainer = encoder.container(keyedBy: ObjectKey.self)
             var seenStringValues: Set<String> = []
             for key in value.keys.sorted() {
