@@ -28,7 +28,12 @@ Legend: **Supported** · **Partial** · **Unsupported** · **API-fallback** (HA 
 | `states()` / `is_state` / `state_attr` / `has_value` / `expand` | Supported | Callable object — no preprocess |
 | `\| states` filter | Supported | Same function as `states(...)` |
 | `states.domain.object` + print → state | Supported | Entity `stringRepresentation` |
-| Areas / devices / floors / labels | Partial | More helpers planned |
+| `iif` / `is_number` / `is_defined` | Supported | Phase 4 — function, filter, and tests |
+| `slugify` / `average` | Supported | Phase 4 |
+| `regex_match` / `search` / `replace` / `findall` | Supported | Phase 4 (+ `match`/`search` tests) |
+| `floor_entities` | Supported | Phase 4 |
+| `labels()` overload | Supported | All labels, or labels for entity/device/area |
+| Areas / devices / floors / labels | Supported | Core registry helpers present |
 | Datetime helpers | Partial | ISO/numeric shims |
 | `POST /api/template` | Supported | |
 | Inheritance / raw / with / include / import | Supported | Phase 2 in JinjaCore (loader still required for include/extends) |

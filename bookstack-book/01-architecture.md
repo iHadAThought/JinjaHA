@@ -28,6 +28,10 @@ JinjaCore supports `{% raw %}`, `{% with %}`, `{% include %}` (`ignore missing`,
 
 `Value.object` may include an optional `call` hook and `stringRepresentation`. HA `states` is a callable object (dotted access + `states(...)` + `| states`); entity objects print their state string.
 
+## HA helpers (Phase 4)
+
+Registered via Environment registries: `iif`, `is_number`, `is_defined`, `slugify`, `average`, regex helpers, `floor_entities`, and `labels(lookup?)` overload.
+
 ## Environment merge
 
 Root environments seed built-ins **first**, then caller overlays. Custom `range` and HA globals survive `Interpreter.interpret` via `Environment(copying:)`.

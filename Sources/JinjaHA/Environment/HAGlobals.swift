@@ -53,6 +53,12 @@ enum HAGlobals {
 
         // Safer range with hard cap — overrides built-in via env merge (Phase 1).
         env.registerGlobal("range", .function(makeSafeRange(limits: limits)))
+
+        // Phase 4 helpers (also registered as filters/tests inside).
+        HAHelpers.register(into: env, snapshot: snapshot)
+
+        // is_state as a test for select("is_state", "on") over entity IDs.
+        env.registerTest("is_state", makeIsState(snapshot: snapshot))
     }
 
     // MARK: - States
@@ -495,7 +501,50 @@ enum HAGlobals {
     }
 
     private static func makeLabels(snapshot: HAStateSnapshot) -> @Sendable ([Value], [String: Value], Environment) throws -> Value {
-        { _, _, _ in .array(snapshot.labels.map { .string($0.labelID) }) }
+        { args, kwargs, _ in
+            // Overload: labels() → all; labels(lookup) → labels on entity/device/area.
+            guard let lookupValue = optionalFirst(args, kwargs, name: "lookup") else {
+                let ids = snapshot.labels.map(\.labelID).sorted()
+                return .array(ids.map(Value.string))
+            }
+            let lookup = lookupValue.description
+            if let entity = snapshot.entity(id: lookup) {
+                if case let .array(labels) = entity.attributes["labels"] {
+                    let ids = labels.compactMap(\.stringValue).sorted()
+                    return .array(ids.map(Value.string))
+                }
+                // Labels inherited from owning device/area.
+                var ids = Set<String>()
+                if let device = snapshot.devices.first(where: { $0.entities.contains(lookup) }) {
+                    ids.formUnion(device.labels)
+                    if let areaID = device.areaID,
+                       let area = snapshot.areas.first(where: { $0.areaID == areaID }) {
+                        ids.formUnion(area.labels)
+                    }
+                }
+                if case let .string(areaID) = entity.attributes["area_id"],
+                   let area = snapshot.areas.first(where: { $0.areaID == areaID }) {
+                    ids.formUnion(area.labels)
+                }
+                return .array(ids.sorted().map(Value.string))
+            }
+            if let device = snapshot.devices.first(where: { $0.id == lookup || $0.displayName == lookup }) {
+                return .array(device.labels.sorted().map(Value.string))
+            }
+            if let area = snapshot.areas.first(where: { $0.areaID == lookup || $0.name == lookup }) {
+                return .array(area.labels.sorted().map(Value.string))
+            }
+            return .array([])
+        }
+    }
+
+    private static func optionalFirst(
+        _ args: [Value],
+        _ kwargs: [String: Value],
+        name: String
+    ) -> Value? {
+        if let first = args.first { return first }
+        return kwargs[name]
     }
 
     private static func makeLabelID(snapshot: HAStateSnapshot) -> @Sendable ([Value], [String: Value], Environment) throws -> Value {
