@@ -56,7 +56,7 @@ public struct HAEntityState: Sendable, Hashable, Codable {
     }
 
     /// Jinja object representing this entity (`state`, `attributes`, …).
-    public func asJinjaValue() throws -> Value {
+    public func asJinjaValue(timeZone: TimeZone = .current) throws -> Value {
         var attrs = OrderedDictionary<ObjectKey, Value>()
         for key in attributes.keys.sorted() {
             attrs[.string(key)] = try attributes[key]!.asJinjaValue()
@@ -70,10 +70,10 @@ public struct HAEntityState: Sendable, Hashable, Codable {
         dict[.string("name")] = .string(friendlyName)
         dict[.string("attributes")] = .object(attrs)
         if let lastChanged {
-            dict[.string("last_changed")] = .string(ISO8601DateFormatter().string(from: lastChanged))
+            dict[.string("last_changed")] = .datetime(lastChanged, timeZone: timeZone)
         }
         if let lastUpdated {
-            dict[.string("last_updated")] = .string(ISO8601DateFormatter().string(from: lastUpdated))
+            dict[.string("last_updated")] = .datetime(lastUpdated, timeZone: timeZone)
         }
         // HA: `{{ states.domain.object }}` prints the state string while still
         // allowing `.state` / `.attributes` member access.

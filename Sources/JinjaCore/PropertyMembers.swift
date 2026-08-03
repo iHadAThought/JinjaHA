@@ -25,9 +25,98 @@ public enum PropertyMembers {
         case let .string(str):
             return try evaluateStringProperty(str, propertyName)
         case let .object(obj, _, _):
+            if obj[.string(JinjaDateTimeKeys.datetimeEpoch)] != nil {
+                if let method = try evaluateDateTimeMethod(obj, propertyName) {
+                    return method
+                }
+            }
+            if obj[.string(JinjaDateTimeKeys.timedeltaSeconds)] != nil {
+                if let method = try evaluateTimedeltaMethod(obj, propertyName) {
+                    return method
+                }
+            }
             return try evaluateObjectProperty(obj, propertyName)
         default:
             return .undefined
+        }
+    }
+
+    // MARK: - Datetime / timedelta methods
+
+    private static func evaluateDateTimeMethod(
+        _ obj: OrderedDictionary<ObjectKey, Value>,
+        _ propertyName: String
+    ) throws -> Value? {
+        guard case .double(let epoch) = obj[.string(JinjaDateTimeKeys.datetimeEpoch)] else {
+            return nil
+        }
+        let date = Date(timeIntervalSince1970: epoch)
+        let tz: TimeZone = {
+            if case .string(let id) = obj[.string(JinjaDateTimeKeys.datetimeTZ)],
+               let zone = TimeZone(identifier: id)
+            {
+                return zone
+            }
+            return .current
+        }()
+
+        switch propertyName {
+        case "isoformat":
+            let fn: @Sendable ([Value], [String: Value], Environment) throws -> Value = { _, _, _ in
+                .string(formatJinjaDateTime(date, timeZone: tz))
+            }
+            return .function(fn)
+        case "timestamp":
+            let fn: @Sendable ([Value], [String: Value], Environment) throws -> Value = { _, _, _ in
+                .double(epoch)
+            }
+            return .function(fn)
+        case "date":
+            let fn: @Sendable ([Value], [String: Value], Environment) throws -> Value = { _, _, _ in
+                var calendar = Calendar(identifier: .gregorian)
+                calendar.timeZone = tz
+                let day = calendar.startOfDay(for: date)
+                return .datetime(day, timeZone: tz)
+            }
+            return .function(fn)
+        case "time":
+            let fn: @Sendable ([Value], [String: Value], Environment) throws -> Value = { _, _, _ in
+                var calendar = Calendar(identifier: .gregorian)
+                calendar.timeZone = tz
+                let parts = calendar.dateComponents([.hour, .minute, .second, .nanosecond], from: date)
+                let h = parts.hour ?? 0
+                let m = parts.minute ?? 0
+                let s = parts.second ?? 0
+                let micro = (parts.nanosecond ?? 0) / 1000
+                return .string(String(format: "%02d:%02d:%02d.%06d", h, m, s, micro))
+            }
+            return .function(fn)
+        case "weekday":
+            // Also available as attribute; method form for Python parity.
+            let fn: @Sendable ([Value], [String: Value], Environment) throws -> Value = { _, _, _ in
+                obj[.string("weekday")] ?? .int(0)
+            }
+            return .function(fn)
+        default:
+            return nil
+        }
+    }
+
+    private static func evaluateTimedeltaMethod(
+        _ obj: OrderedDictionary<ObjectKey, Value>,
+        _ propertyName: String
+    ) throws -> Value? {
+        guard case .double(let seconds) = obj[.string(JinjaDateTimeKeys.timedeltaSeconds)] else {
+            return nil
+        }
+        switch propertyName {
+        case "total_seconds":
+            let fn: @Sendable ([Value], [String: Value], Environment) throws -> Value = { _, _, _ in
+                .double(seconds)
+            }
+            return .function(fn)
+        default:
+            return nil
         }
     }
 

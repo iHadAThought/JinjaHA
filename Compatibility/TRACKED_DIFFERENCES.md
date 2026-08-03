@@ -11,6 +11,7 @@ Seed notes for cases where JinjaHA / JinjaCore deliberately diverge from CPython
 | TD-005 | HA `states` dual-use | JinjaHA | Intentional | One callable object: `states()`, `states.x.y`, `\| states` — no preprocess |
 | TD-006 | Regex escapes in goldens | Tests | Intentional | Lexer consumes `\\`; prefer `[0-9]` or carefully doubled escapes in Swift strings |
 | TD-007 | GFM tables in SwiftUI | JinjaHASwiftUI | Intentional | `MarkdownDocumentView` renders pipe tables; Foundation markdown collapses them |
+| TD-008 | Datetime objects | JinjaCore/JinjaHA | Intentional | `Value.datetime`/`timedelta` (object convention), not CPython `datetime` modules; no arbitrary Python methods |
 
 ## Adding a new tracked difference
 

@@ -238,6 +238,17 @@ public enum Value: Sendable {
     ///   - other: The value to add to the current value
     /// - Throws: `JinjaError.runtime` if the values cannot be added
     public func add(with other: Value) throws -> Value {
+        if let leftDate = dateTimeDate, let rightTD = other.timedeltaSeconds {
+            let tz = dateTimeTimeZone ?? .current
+            return .datetime(leftDate.addingTimeInterval(rightTD), timeZone: tz)
+        }
+        if let leftTD = timedeltaSeconds, let rightDate = other.dateTimeDate {
+            let tz = other.dateTimeTimeZone ?? .current
+            return .datetime(rightDate.addingTimeInterval(leftTD), timeZone: tz)
+        }
+        if let leftTD = timedeltaSeconds, let rightTD = other.timedeltaSeconds {
+            return .timedelta(seconds: leftTD + rightTD)
+        }
         switch (self, other) {
         case let (.int(a), .int(b)):
             return .int(a + b)
@@ -284,6 +295,16 @@ public enum Value: Sendable {
     ///   - other: The value to subtract from the current value
     /// - Throws: `JinjaError.runtime` if the values cannot be subtracted
     public func subtract(by other: Value) throws -> Value {
+        if let leftDate = dateTimeDate, let rightDate = other.dateTimeDate {
+            return .timedelta(seconds: leftDate.timeIntervalSince(rightDate))
+        }
+        if let leftDate = dateTimeDate, let rightTD = other.timedeltaSeconds {
+            let tz = dateTimeTimeZone ?? .current
+            return .datetime(leftDate.addingTimeInterval(-rightTD), timeZone: tz)
+        }
+        if let leftTD = timedeltaSeconds, let rightTD = other.timedeltaSeconds {
+            return .timedelta(seconds: leftTD - rightTD)
+        }
         switch (self, other) {
         case let (.int(a), .int(b)):
             return .int(a - b)

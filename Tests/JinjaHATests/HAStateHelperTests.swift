@@ -46,7 +46,9 @@ final class HAStateHelperTests: XCTestCase {
 
     func testDatetimeHelpers() throws {
         let engine = try TestSupport.makeEngine()
-        let output = try engine.render("{{ as_timestamp(1700000000) }}|{{ timedelta(hours=1) }}")
+        let output = try engine.render(
+            "{{ as_timestamp(1700000000) }}|{{ timedelta(hours=1).total_seconds() }}"
+        )
         XCTAssertEqual(output, "1700000000.0|3600.0")
     }
 

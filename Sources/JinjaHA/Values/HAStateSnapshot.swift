@@ -12,6 +12,10 @@ public struct HAStateSnapshot: Sendable, Hashable, Codable {
     public var labels: [HALabel]
     public var timeZoneIdentifier: String
     public var now: Date?
+    /// Home location for `distance` / `closest` (degrees). Optional until the app fills it.
+    public var latitude: Double?
+    public var longitude: Double?
+    public var elevation: Double?
 
     public init(
         entities: [String: HAEntityState] = [:],
@@ -20,7 +24,10 @@ public struct HAStateSnapshot: Sendable, Hashable, Codable {
         floors: [HAFloor] = [],
         labels: [HALabel] = [],
         timeZoneIdentifier: String = TimeZone.current.identifier,
-        now: Date? = nil
+        now: Date? = nil,
+        latitude: Double? = nil,
+        longitude: Double? = nil,
+        elevation: Double? = nil
     ) {
         self.entities = entities
         self.areas = areas
@@ -29,6 +36,9 @@ public struct HAStateSnapshot: Sendable, Hashable, Codable {
         self.labels = labels
         self.timeZoneIdentifier = timeZoneIdentifier
         self.now = now
+        self.latitude = latitude
+        self.longitude = longitude
+        self.elevation = elevation
     }
 
     public func entity(id entityID: String) -> HAEntityState? {

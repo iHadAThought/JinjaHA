@@ -20,7 +20,8 @@ Legend: **Supported** · **Partial** · **Unsupported** · **API-fallback** (HA 
 | `{% import %}` / `{% from ... import %}` | Supported | Phase 2 — macros into namespace or aliases |
 | Callable objects | Supported | Phase 3 — `Value.object(..., call:)` |
 | Custom object stringify | Supported | Phase 3 — `stringRepresentation` |
-| `{% do %}` | Unsupported | Backlog — same statement hooks as Phase 2 |
+| Datetime / timedelta values | Supported | `Value.datetime` / `Value.timedelta`; `+`/`-` arithmetic |
+| `{% do %}` | Unsupported | Backlog — rarely needed for Lovelace markdown |
 | `{% debug %}` | Unsupported | Backlog |
 | Line statements / `{% trans %}` i18n | Unsupported | Backlog |
 
@@ -37,10 +38,16 @@ Legend: **Supported** · **Partial** · **Unsupported** · **API-fallback** (HA 
 | `floor_entities` | Supported | Phase 4 |
 | `labels()` overload | Supported | All labels, or labels for entity/device/area |
 | Areas / devices / floors / labels | Supported | Core registry helpers present |
-| Datetime helpers | Partial | ISO/numeric shims (full datetime value type = later epic) |
-| `POST /api/template` | Supported | |
+| Datetime objects | Supported | `now`/`utcnow`/`as_datetime`/`today_at`/`strptime` return datetime; `last_changed`/`last_updated` too |
+| Timedelta + `total_seconds()` | Supported | `timedelta(...)` / `as_timedelta`; datetime−datetime → timedelta |
+| `relative_time` / `time_since` / `time_until` | Supported | Humanized strings |
+| Math extras (`pi`/`e`/`log`/`sin`/`cos`/`tan`/`sqrt`) | Supported | |
+| Geo (`distance` / `closest`) | Supported | Needs `HAStateSnapshot.latitude`/`longitude` (+ entity lat/lon attrs) |
+| Encoding / hash (`base64_*` / `md5` / `sha256` / `urlencode`) | Supported | |
+| `POST /api/template` | Supported | Keep `FallbackTemplateRenderer` for HACS/Python gaps |
 | Inheritance / raw / with / include / import | Supported | Phase 2 in JinjaCore (loader still required for include/extends) |
-| Geo / translations / encoding-hash / repairs / math extras | Unsupported | Backlog via registries + FEATURES |
+| Translations / repairs helpers | Unsupported | Rare on TV Lovelace; API fallback |
+| HACS / custom Jinja / arbitrary Python methods | Unsupported | API-fallback forever |
 
 ## JinjaHASwiftUI
 

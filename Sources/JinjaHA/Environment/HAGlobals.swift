@@ -21,6 +21,7 @@ enum HAGlobals {
         env["timedelta"] = .function(makeTimedelta())
         env["time_since"] = .function(makeTimeSince(snapshot: snapshot, until: false))
         env["time_until"] = .function(makeTimeSince(snapshot: snapshot, until: true))
+        env["relative_time"] = .function(makeRelativeTime(snapshot: snapshot))
         env["today_at"] = .function(makeTodayAt(snapshot: snapshot))
         env["timestamp_custom"] = .function(makeTimestampCustom(snapshot: snapshot))
         env["timestamp_local"] = .function(makeTimestampLocal(snapshot: snapshot, utc: false))
@@ -56,6 +57,8 @@ enum HAGlobals {
 
         // Phase 4 helpers (also registered as filters/tests inside).
         HAHelpers.register(into: env, snapshot: snapshot)
+        // Math / geo / encoding helpers used by dashboard markdown.
+        HAExtraHelpers.register(into: env, snapshot: snapshot)
 
         // is_state as a test for select("is_state", "on") over entity IDs.
         env.registerTest("is_state", makeIsState(snapshot: snapshot))
@@ -68,7 +71,7 @@ enum HAGlobals {
             if args.isEmpty {
                 let values = try snapshot.entities.values
                     .sorted { $0.entityID < $1.entityID }
-                    .map { try $0.asJinjaValue() }
+                    .map { try $0.asJinjaValue(timeZone: snapshot.timeZone) }
                 return .array(values)
             }
             let entityID = try requireString(args, kwargs, name: "entity_id", index: 0)
@@ -97,7 +100,7 @@ enum HAGlobals {
         for domain in grouped.keys.sorted() {
             var entities = OrderedDictionary<ObjectKey, Value>()
             for entity in grouped[domain]!.sorted(by: { $0.objectID < $1.objectID }) {
-                if let value = try? entity.asJinjaValue() {
+                if let value = try? entity.asJinjaValue(timeZone: snapshot.timeZone) {
                     entities[.string(entity.objectID)] = value
                 }
             }
@@ -189,7 +192,9 @@ enum HAGlobals {
                 }
             }
             let unique = Array(Set(entityIDs)).sorted()
-            let values = try unique.compactMap { snapshot.entity(id: $0) }.map { try $0.asJinjaValue() }
+            let values = try unique.compactMap { snapshot.entity(id: $0) }.map {
+                try $0.asJinjaValue(timeZone: snapshot.timeZone)
+            }
             return .array(values)
         }
     }
@@ -210,7 +215,8 @@ enum HAGlobals {
 
     private static func makeNow(snapshot: HAStateSnapshot, utc: Bool) -> @Sendable ([Value], [String: Value], Environment) throws -> Value {
         { _, _, _ in
-            .string(formatDate(snapshot.currentDate, timeZone: utc ? TimeZone(secondsFromGMT: 0)! : snapshot.timeZone))
+            let tz = utc ? TimeZone(secondsFromGMT: 0)! : snapshot.timeZone
+            return .datetime(snapshot.currentDate, timeZone: tz)
         }
     }
 
@@ -224,11 +230,14 @@ enum HAGlobals {
     }
 
     private static func makeAsDatetime(snapshot: HAStateSnapshot) -> @Sendable ([Value], [String: Value], Environment) throws -> Value {
-        { args, _, _ in
+        { args, kwargs, _ in
             guard let first = args.first, let date = parseDate(first, snapshot: snapshot) else {
                 return .null
             }
-            return .string(formatDate(date, timeZone: snapshot.timeZone))
+            // Optional naive/aware: HA accepts timezone kwargs; we keep snapshot TZ unless UTC.
+            let utc = boolArg(args, kwargs, name: "utc", index: 1) ?? false
+            let tz = utc ? TimeZone(secondsFromGMT: 0)! : snapshot.timeZone
+            return .datetime(date, timeZone: tz)
         }
     }
 
@@ -237,20 +246,23 @@ enum HAGlobals {
             guard let first = args.first, let date = parseDate(first, snapshot: snapshot) else {
                 return .null
             }
-            return .string(formatDate(date, timeZone: snapshot.timeZone))
+            return .datetime(date, timeZone: snapshot.timeZone)
         }
     }
 
     private static func makeAsTimedelta() -> @Sendable ([Value], [String: Value], Environment) throws -> Value {
         { args, _, _ in
             guard let first = args.first else { return .null }
+            if let existing = first.timedeltaSeconds {
+                return .timedelta(seconds: existing)
+            }
             switch first {
             case .string(let text):
-                return .double(parseISO8601Duration(text) ?? 0)
+                return .timedelta(seconds: parseISO8601Duration(text) ?? 0)
             case .int(let value):
-                return .double(Double(value))
+                return .timedelta(seconds: Double(value))
             case .double(let value):
-                return .double(value)
+                return .timedelta(seconds: value)
             default:
                 return .null
             }
@@ -274,7 +286,7 @@ enum HAGlobals {
                 + seconds
                 + milliseconds / 1000
                 + microseconds / 1_000_000
-            return .double(total)
+            return .timedelta(seconds: total)
         }
     }
 
@@ -285,6 +297,16 @@ enum HAGlobals {
             }
             let now = snapshot.currentDate
             let interval = until ? date.timeIntervalSince(now) : now.timeIntervalSince(date)
+            return .string(humanize(abs(interval)))
+        }
+    }
+
+    private static func makeRelativeTime(snapshot: HAStateSnapshot) -> @Sendable ([Value], [String: Value], Environment) throws -> Value {
+        { args, _, _ in
+            guard let first = args.first, let date = parseDate(first, snapshot: snapshot) else {
+                return .string("")
+            }
+            let interval = snapshot.currentDate.timeIntervalSince(date)
             return .string(humanize(abs(interval)))
         }
     }
@@ -307,7 +329,7 @@ enum HAGlobals {
             components.minute = minute
             components.second = second
             let date = calendar.date(from: components) ?? now
-            return .string(formatDate(date, timeZone: snapshot.timeZone))
+            return .datetime(date, timeZone: snapshot.timeZone)
         }
     }
 
@@ -345,7 +367,7 @@ enum HAGlobals {
             formatter.locale = Locale(identifier: "en_US_POSIX")
             formatter.dateFormat = pythonFormatToDateFormat(format)
             guard let date = formatter.date(from: text) else { return .null }
-            return .string(ISO8601DateFormatter().string(from: date))
+            return .datetime(date, timeZone: TimeZone.current)
         }
     }
 
@@ -651,6 +673,9 @@ func numberArg(_ args: [Value], _ kwargs: [String: Value], name: String, index: 
 }
 
 func parseDate(_ value: Value, snapshot: HAStateSnapshot) -> Date? {
+    if let date = value.dateTimeDate {
+        return date
+    }
     switch value {
     case .int(let int):
         return Date(timeIntervalSince1970: TimeInterval(int))
