@@ -134,9 +134,182 @@ public struct Parser: Sendable {
         case .generation:
             advance()
             return try parseGenerationStatement()
+        case .raw:
+            advance()
+            return try parseRawStatement()
+        case .with:
+            advance()
+            return try parseWithStatement()
+        case .include:
+            advance()
+            return try parseIncludeStatement()
+        case .extends:
+            advance()
+            return try parseExtendsStatement()
+        case .block:
+            advance()
+            return try parseBlockStatement()
+        case .`import`:
+            advance()
+            return try parseImportStatement()
+        case .from:
+            advance()
+            return try parseFromImportStatement()
         default:
             throw JinjaError.parser("Unknown statement: \(keywordToken.value)")
         }
+    }
+
+    private mutating func parseRawStatement() throws -> Statement {
+        try consume(.closeStatement, message: "Expected '%}' after raw.")
+        // Prefer lexer-collapsed text; still accept nested nodes until endraw.
+        let body = try parseNodesUntil([.endraw])
+        try consume(.openStatement, message: "Expected '{%' for endraw.")
+        try consume(.endraw, message: "Expected 'endraw'.")
+        try consume(.closeStatement, message: "Expected '%}' after endraw.")
+        var text = ""
+        for node in body {
+            if case let .text(content) = node {
+                text += content
+            } else {
+                throw JinjaError.parser("raw blocks may only contain literal text")
+            }
+        }
+        return .raw(text)
+    }
+
+    private mutating func parseWithStatement() throws -> Statement {
+        var assignments: [NamedExpression] = []
+        if !check(.closeStatement) {
+            repeat {
+                try consume(.identifier, message: "Expected variable name in with.")
+                let name = String(previous().value)
+                try consume(.equals, message: "Expected '=' in with assignment.")
+                let expr = try parseExpression()
+                assignments.append(NamedExpression(name: name, expression: expr))
+            } while match(.comma)
+        }
+        try consume(.closeStatement, message: "Expected '%}' after with.")
+        let body = try parseNodesUntil([.endwith])
+        try consume(.openStatement, message: "Expected '{%' for endwith.")
+        try consume(.endwith, message: "Expected 'endwith'.")
+        try consume(.closeStatement, message: "Expected '%}' after endwith.")
+        return .with(assignments: assignments, body: body)
+    }
+
+    private mutating func parseIncludeStatement() throws -> Statement {
+        let name = try parseExpression()
+        var ignoreMissing = false
+        var withContext = true
+        while !check(.closeStatement) {
+            // `with` is a statement keyword token; other modifiers are identifiers.
+            if match(.with) {
+                try consume(.identifier, message: "Expected 'context' after with.")
+                guard String(previous().value) == "context" else {
+                    throw JinjaError.parser("Expected 'context' after with.")
+                }
+                withContext = true
+                continue
+            }
+            if match(.identifier) {
+                let word = String(previous().value)
+                switch word {
+                case "ignore":
+                    try consume(.identifier, message: "Expected 'missing' after ignore.")
+                    guard String(previous().value) == "missing" else {
+                        throw JinjaError.parser("Expected 'missing' after ignore.")
+                    }
+                    ignoreMissing = true
+                case "without":
+                    try consume(.identifier, message: "Expected 'context' after without.")
+                    guard String(previous().value) == "context" else {
+                        throw JinjaError.parser("Expected 'context' after without.")
+                    }
+                    withContext = false
+                default:
+                    throw JinjaError.parser("Unexpected include modifier: \(word)")
+                }
+            } else {
+                break
+            }
+        }
+        try consume(.closeStatement, message: "Expected '%}' after include.")
+        return .include(name: name, ignoreMissing: ignoreMissing, withContext: withContext)
+    }
+
+    private mutating func parseExtendsStatement() throws -> Statement {
+        let name = try parseExpression()
+        try consume(.closeStatement, message: "Expected '%}' after extends.")
+        return .extends(name)
+    }
+
+    private mutating func parseBlockStatement() throws -> Statement {
+        try consume(.identifier, message: "Expected block name.")
+        let name = String(previous().value)
+        try consume(.closeStatement, message: "Expected '%}' after block name.")
+        let body = try parseNodesUntil([.endblock])
+        try consume(.openStatement, message: "Expected '{%' for endblock.")
+        try consume(.endblock, message: "Expected 'endblock'.")
+        if check(.identifier) { advance() }  // optional repeated name
+        try consume(.closeStatement, message: "Expected '%}' after endblock.")
+        return .block(name: name, body: body)
+    }
+
+    private mutating func parseImportStatement() throws -> Statement {
+        let template = try parseExpression()
+        try consume(.identifier, message: "Expected 'as' after import path.")
+        guard String(previous().value) == "as" else {
+            throw JinjaError.parser("Expected 'as' after import path.")
+        }
+        try consume(.identifier, message: "Expected namespace after 'as'.")
+        let namespace = String(previous().value)
+        var withContext = false
+        if match(.with) {
+            try consume(.identifier, message: "Expected 'context'.")
+            withContext = true
+        } else if match(.identifier) {
+            let word = String(previous().value)
+            if word == "without" {
+                try consume(.identifier, message: "Expected 'context'.")
+                withContext = false
+            } else {
+                throw JinjaError.parser("Unexpected import modifier: \(word)")
+            }
+        }
+        try consume(.closeStatement, message: "Expected '%}' after import.")
+        return .import(template: template, namespace: namespace, withContext: withContext)
+    }
+
+    private mutating func parseFromImportStatement() throws -> Statement {
+        let template = try parseExpression()
+        try consume(.`import`, message: "Expected 'import' after from path.")
+        var names: [ImportedName] = []
+        repeat {
+            try consume(.identifier, message: "Expected imported name.")
+            let name = String(previous().value)
+            var alias: String? = nil
+            if check(.identifier), String(peek().value) == "as" {
+                advance()
+                try consume(.identifier, message: "Expected alias after 'as'.")
+                alias = String(previous().value)
+            }
+            names.append(ImportedName(name: name, alias: alias))
+        } while match(.comma)
+        var withContext = false
+        if match(.with) {
+            try consume(.identifier, message: "Expected 'context'.")
+            withContext = true
+        } else if match(.identifier) {
+            let word = String(previous().value)
+            if word == "without" {
+                try consume(.identifier, message: "Expected 'context'.")
+                withContext = false
+            } else {
+                throw JinjaError.parser("Unexpected from-import modifier: \(word)")
+            }
+        }
+        try consume(.closeStatement, message: "Expected '%}' after from-import.")
+        return .fromImport(template: template, names: names, withContext: withContext)
     }
 
     private mutating func parseIfStatement() throws -> Statement {
@@ -460,8 +633,10 @@ public struct Parser: Sendable {
             if match(.concat) {
                 let right = try parseFilter()
                 expr = .binary(.concat, expr, right)
-            } else if check(anyOf: Token.Kind.primaryExpressionStarters) {
-                // Implicit string concatenation - if we see another primary expression, concatenate it
+            } else if check(.string) {
+                // Adjacent string literals only (Python/Jinja). Do not treat
+                // identifiers as implicit concat — that would swallow statement
+                // modifiers like `as`, `ignore missing`, and `without context`.
                 let right = try parseFilter()
                 expr = .binary(.concat, expr, right)
             } else {
@@ -769,9 +944,5 @@ public struct Parser: Sendable {
 extension Token.Kind {
     fileprivate static let allowedAsIdentifier: Set<Token.Kind> = [
         .identifier, .if, .for, .in, .and, .or, .not, .is, .else, .set, .break, .continue,
-    ]
-
-    fileprivate static let primaryExpressionStarters: Set<Token.Kind> = [
-        .string, .identifier, .number, .boolean, .openParen, .openBracket, .openBrace,
     ]
 }

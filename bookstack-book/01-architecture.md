@@ -13,12 +13,16 @@ Apps → JinjaHASwiftUI → JinjaHA → JinjaCore
 | JinjaHA | `HAStateSnapshot`, HA globals/filters, API client, limits | HA adds template functions |
 | JinjaHASwiftUI | Views + `TemplateRenderModel` | UI / markdown presentation |
 
-## Extension points (Phase 1)
+## Extension points
 
 - `registerFilter` / `registerTest` / `registerGlobal`
-- `TemplateLoader` (default **deny-all**)
+- `TemplateLoader` (default **deny-all**; required for include/extends/import)
 - `AttributePolicy` (default blocks `_`-prefixed names)
 - `TemplateRendering` — local / API / fallback backends
+
+## Statements (Phase 2)
+
+JinjaCore supports `{% raw %}`, `{% with %}`, `{% include %}` (`ignore missing`, `with`/`without context`), `{% extends %}` / `{% block %}` / `{{ super() }}`, and `{% import %}` / `{% from ... import %}`.
 
 ## Environment merge
 

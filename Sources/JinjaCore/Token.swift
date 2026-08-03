@@ -128,6 +128,26 @@ public struct Token: Hashable, Sendable {
         case generation
         /// End of generation block keyword `endgeneration` (HuggingFace extension).
         case endgeneration
+        /// Raw block keyword `raw` — content is not interpreted.
+        case raw
+        /// End of raw block keyword `endraw`.
+        case endraw
+        /// Scoped assignment keyword `with`.
+        case with
+        /// End of with block keyword `endwith`.
+        case endwith
+        /// Template include keyword `include`.
+        case include
+        /// Template inheritance keyword `extends`.
+        case extends
+        /// Named overrideable region keyword `block`.
+        case block
+        /// End of block keyword `endblock`.
+        case endblock
+        /// Import macros keyword `import`.
+        case `import`
+        /// Selective import keyword `from`.
+        case from
         /// Comment content `{# ... #}`.
         case comment
         /// End of file marker.

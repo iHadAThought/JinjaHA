@@ -192,4 +192,47 @@ public enum Statement: Hashable, Codable, Sendable {
     /// to create masks for assistant-generated tokens when `return_assistant_tokens_mask=True`.
     /// During template rendering, the content is output normally.
     case generation([Node])
+
+    /// Literal output that must not be interpreted (`{% raw %}...{% endraw %}`).
+    case raw(String)
+
+    /// Scoped assignments (`{% with x=1 %}...{% endwith %}`).
+    case with(assignments: [NamedExpression], body: [Node])
+
+    /// Include another template by name expression.
+    case include(name: Expression, ignoreMissing: Bool, withContext: Bool)
+
+    /// Extend a parent template (`{% extends "base.html" %}`).
+    case extends(Expression)
+
+    /// Named block for inheritance (`{% block name %}...{% endblock %}`).
+    case block(name: String, body: [Node])
+
+    /// Import all macros from a template into a namespace (`{% import "x" as forms %}`).
+    case `import`(template: Expression, namespace: String, withContext: Bool)
+
+    /// Import selected names from a template (`{% from "x" import a, b as c %}`).
+    case fromImport(template: Expression, names: [ImportedName], withContext: Bool)
+}
+
+/// A named expression binding used by `{% with %}` and similar statements.
+public struct NamedExpression: Hashable, Codable, Sendable {
+    public var name: String
+    public var expression: Expression
+
+    public init(name: String, expression: Expression) {
+        self.name = name
+        self.expression = expression
+    }
+}
+
+/// An imported name with optional alias (`name` or `name as alias`).
+public struct ImportedName: Hashable, Codable, Sendable {
+    public var name: String
+    public var alias: String
+
+    public init(name: String, alias: String? = nil) {
+        self.name = name
+        self.alias = alias ?? name
+    }
 }

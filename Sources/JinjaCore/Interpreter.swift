@@ -35,6 +35,12 @@ public final class Environment: @unchecked Sendable {
     /// Attribute access policy (default blocks `_`-prefixed names).
     public var attributePolicy: any AttributePolicy = DefaultAttributePolicy()
 
+    /// Child block overrides for `{% extends %}` / `{% block %}`.
+    public var blockOverrides: [String: [Node]] = [:]
+
+    /// Stack of parent block bodies for `{{ super() }}`.
+    var blockSuperStack: [[Node]] = []
+
     // Options
 
     /// Whether leading spaces and tabs are stripped from the start of a line to a block.
@@ -67,17 +73,32 @@ public final class Environment: @unchecked Sendable {
             self.tests = parent.tests
             self.loader = parent.loader
             self.attributePolicy = parent.attributePolicy
+            self.blockOverrides = parent.blockOverrides
+            self.blockSuperStack = parent.blockSuperStack
             self.lstripBlocks = parent.lstripBlocks
             self.trimBlocks = parent.trimBlocks
         } else if includeBuiltIns {
             var merged = Globals.builtIn
+            merged["super"] = .function(Self.superFunction)
             for (name, value) in initial {
                 merged[name] = value
             }
             self.variables = merged
         } else {
             self.variables = initial
+            if self.variables["super"] == nil {
+                self.variables["super"] = .function(Self.superFunction)
+            }
         }
+    }
+
+    private static let superFunction: JinjaFunction = { _, _, env in
+        guard let parentBody = env.blockSuperStack.last else {
+            return .string("")
+        }
+        var buffer = ""
+        try Interpreter.interpret(parentBody, env: env, into: &buffer)
+        return .string(buffer)
     }
 
     /// Copy for interpreter entry: variables + registries + policy/loader.
@@ -87,6 +108,8 @@ public final class Environment: @unchecked Sendable {
         self.tests = other.tests
         self.loader = other.loader
         self.attributePolicy = other.attributePolicy
+        self.blockOverrides = other.blockOverrides
+        self.blockSuperStack = other.blockSuperStack
         self.lstripBlocks = other.lstripBlocks
         self.trimBlocks = other.trimBlocks
     }
@@ -161,12 +184,59 @@ public enum Interpreter {
     /// - Returns: The rendered template output as a string
     /// - Throws: `RuntimeError` if an error occurs during interpretation
     public static func interpret(_ nodes: [Node], environment: Environment) throws -> String {
-        // Preserve registries / loader / policy; do not re-clobber custom globals.
         let env = Environment(copying: environment)
+        return try render(nodes, env: env)
+    }
+
+    /// Render with extends/include resolution using an already-prepared environment.
+    static func render(_ nodes: [Node], env: Environment) throws -> String {
+        if let parentName = extractExtendsTarget(nodes) {
+            try executeChildPreamble(nodes, env: env)
+            for (name, body) in collectBlocks(nodes) {
+                env.blockOverrides[name] = body
+            }
+            let parentSource = try env.loadTemplate(named: parentName)
+            let parentTemplate = try Template(parentSource)
+            return try render(parentTemplate.nodes, env: env)
+        }
+
         var buffer = ""
         buffer.reserveCapacity(1024)
         try interpret(nodes, env: env, into: &buffer)
         return buffer
+    }
+
+    private static func extractExtendsTarget(_ nodes: [Node]) -> String? {
+        for node in nodes {
+            if case let .statement(.extends(expr)) = node {
+                // Only constant string names are supported for loaders.
+                if case let .string(name) = expr { return name }
+            }
+        }
+        return nil
+    }
+
+    private static func collectBlocks(_ nodes: [Node]) -> [String: [Node]] {
+        var blocks: [String: [Node]] = [:]
+        for node in nodes {
+            if case let .statement(.block(name, body)) = node {
+                blocks[name] = body
+            }
+        }
+        return blocks
+    }
+
+    private static func executeChildPreamble(_ nodes: [Node], env: Environment) throws {
+        for node in nodes {
+            guard case let .statement(stmt) = node else { continue }
+            switch stmt {
+            case .set, .import, .fromImport:
+                var unused = ""
+                try executeStatementWithOutput(stmt, env: env, into: &unused)
+            default:
+                break
+            }
+        }
     }
 
     // MARK: -
@@ -570,11 +640,115 @@ public enum Interpreter {
         case let .generation(body):
             try interpret(body, env: env, into: &buffer)
 
+        case let .raw(text):
+            buffer.append(text)
+
+        case let .with(assignments, body):
+            let child = Environment(parent: env)
+            for binding in assignments {
+                child[binding.name] = try evaluateExpression(binding.expression, env: env)
+            }
+            try interpret(body, env: child, into: &buffer)
+
+        case let .include(nameExpr, ignoreMissing, withContext):
+            let nameValue = try evaluateExpression(nameExpr, env: env)
+            guard case let .string(name) = nameValue else {
+                throw JinjaError.runtime("include name must be a string")
+            }
+            let source: String
+            do {
+                source = try env.loadTemplate(named: name)
+            } catch {
+                if ignoreMissing { break }
+                throw error
+            }
+            let included = try Template(source)
+            let childEnv: Environment
+            if withContext {
+                childEnv = Environment(copying: env)
+            } else {
+                childEnv = Environment()
+                childEnv.loader = env.loader
+                childEnv.filters = env.filters
+                childEnv.tests = env.tests
+                childEnv.attributePolicy = env.attributePolicy
+            }
+            let rendered = try render(included.nodes, env: childEnv)
+            buffer.append(rendered)
+
+        case .extends:
+            // Handled in render() before body execution.
+            break
+
+        case let .block(name, body):
+            if let override = env.blockOverrides[name] {
+                env.blockSuperStack.append(body)
+                let saved = env.blockOverrides.removeValue(forKey: name)
+                try interpret(override, env: env, into: &buffer)
+                if let saved { env.blockOverrides[name] = saved }
+                _ = env.blockSuperStack.popLast()
+            } else {
+                try interpret(body, env: env, into: &buffer)
+            }
+
+        case let .import(templateExpr, namespace, withContext):
+            try importMacros(
+                from: templateExpr,
+                env: env,
+                withContext: withContext
+            ) { macros in
+                env[namespace] = .object(macros)
+            }
+
+        case let .fromImport(templateExpr, names, withContext):
+            try importMacros(
+                from: templateExpr,
+                env: env,
+                withContext: withContext
+            ) { macros in
+                for item in names {
+                    env[item.alias] = macros[.string(item.name)] ?? .undefined
+                }
+            }
+
         case .break:
             throw ControlFlow.break
         case .continue:
             throw ControlFlow.continue
         }
+    }
+
+    private static func importMacros(
+        from templateExpr: Expression,
+        env: Environment,
+        withContext: Bool,
+        bind: (OrderedDictionary<ObjectKey, Value>) throws -> Void
+    ) throws {
+        let nameValue = try evaluateExpression(templateExpr, env: env)
+        guard case let .string(name) = nameValue else {
+            throw JinjaError.runtime("import template name must be a string")
+        }
+        let source = try env.loadTemplate(named: name)
+        let template = try Template(source)
+        let isolated: Environment
+        if withContext {
+            isolated = Environment(copying: env)
+        } else {
+            isolated = Environment()
+            isolated.loader = env.loader
+            isolated.filters = env.filters
+            isolated.tests = env.tests
+            isolated.attributePolicy = env.attributePolicy
+        }
+        var discarded = ""
+        try interpret(template.nodes, env: isolated, into: &discarded)
+        var macros = OrderedDictionary<ObjectKey, Value>()
+        for (key, value) in isolated.variables {
+            if case .macro = value {
+                macros[.string(key)] = value
+            }
+        }
+        try bind(macros)
     }
 
     static func executeStatement(_ statement: Statement, env: Environment) throws {
@@ -601,7 +775,8 @@ public enum Interpreter {
             )
 
         // These statements do not produce output directly or are handled elsewhere.
-        case .if, .for, .program, .break, .continue, .call, .filter, .generation:
+        case .if, .for, .program, .break, .continue, .call, .filter, .generation,
+            .raw, .with, .include, .extends, .block, .import, .fromImport:
             break
         }
     }

@@ -11,6 +11,13 @@ public enum Lexer: Sendable {
         "call": .call, "endcall": .endcall,
         "filter": .filter, "endfilter": .endfilter,
         "generation": .generation, "endgeneration": .endgeneration,
+        "raw": .raw, "endraw": .endraw,
+        "with": .with, "endwith": .endwith,
+        "include": .include,
+        "extends": .extends,
+        "block": .block, "endblock": .endblock,
+        "import": .import,
+        "from": .from,
 
         // Python-compatible keywords
         "True": .boolean, "False": .boolean, "None": .null,
@@ -172,6 +179,9 @@ public enum Lexer: Sendable {
                         ), endIndex
                     )
                 } else if nextChar == "%" {  // "{%"
+                    if let rawBlock = try extractRawBlock(from: source, at: position) {
+                        return rawBlock
+                    }
                     let endIndex = source.index(after: nextIndex)
                     return (
                         Token(
@@ -479,6 +489,40 @@ public enum Lexer: Sendable {
         }
 
         throw JinjaError.lexer("Unclosed comment at position \(charPosition)")
+    }
+
+    /// Collapses `{% raw %}...{% endraw %}` into a single text token (Jinja lexer behavior).
+    private static func extractRawBlock(
+        from source: String,
+        at position: String.Index
+    ) throws -> (Token, String.Index)? {
+        let charPosition = source.distance(from: source.startIndex, to: position)
+        // Match {% … raw … %}
+        guard source[position...].hasPrefix("{%") else { return nil }
+        var pos = source.index(position, offsetBy: 2)
+        pos = skipWhitespace(in: source, at: pos)
+        guard pos < source.endIndex else { return nil }
+        let rawWord = "raw"
+        guard source[pos...].hasPrefix(rawWord) else { return nil }
+        let afterWord = source.index(pos, offsetBy: rawWord.count)
+        if afterWord < source.endIndex {
+            let next = source[afterWord]
+            if next.isLetter || next.isNumber || next == "_" { return nil }
+        }
+        pos = skipWhitespace(in: source, at: afterWord)
+        guard pos < source.endIndex, source[pos...].hasPrefix("%}") else { return nil }
+        let contentStart = source.index(pos, offsetBy: 2)
+
+        // Find {% endraw %}
+        let endMarker = #/\{\%\s*endraw\s*\%\}/#
+        guard let match = source[contentStart...].firstMatch(of: endMarker) else {
+            throw JinjaError.lexer("Unclosed raw block at position \(charPosition)")
+        }
+        let content = String(source[contentStart ..< match.range.lowerBound])
+        return (
+            Token(kind: .text, value: content, position: charPosition),
+            match.range.upperBound
+        )
     }
 
 }
