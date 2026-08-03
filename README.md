@@ -6,6 +6,9 @@ Use it in apps that connect to Home Assistant and render Lovelace dashboards (iO
 
 The Jinja2 runtime is **owned** as `JinjaCore` (vendored baseline from huggingface/swift-jinja 2.4.2, Apache-2.0 — see `NOTICE`). There is no runtime dependency on huggingface. See [`Docs/COMPAT.md`](Docs/COMPAT.md) and [`Docs/FEATURES.md`](Docs/FEATURES.md).
 
+**Forgejo:** [Brendan/JinjaHA](https://git.ghostnetwork.app/Brendan/JinjaHA)  
+**BookStack:** [JinjaHA](https://bookstack.ghostnetwork.app/books/jinjaha)
+
 ## Products
 
 | Product | Purpose |
