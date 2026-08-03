@@ -23,6 +23,8 @@ Private Forgejo packages may need a netrc / SPM credential helper.
 cd /Users/brendan/Projects/JinjaHA
 swift test
 swift run MinimalRender
+swift run CompareDemo
+swift run CompareDemo --export-screenshots Docs/screenshots
 ```
 
 ## Quick render

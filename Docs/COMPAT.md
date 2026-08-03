@@ -7,7 +7,7 @@
 | Jinja dialect | 3.1.x (Pallets) |
 | `JinjaCoreInfo.dialectVersion` | 3.1 |
 | Vendored baseline | huggingface/swift-jinja 2.4.2 (owned thereafter) |
-| Last reviewed | 2026-08-02 (Phase 5 test corpus) |
+| Last reviewed | 2026-08-02 (Phase 6 CompareDemo) |
 
 ## Intentional differences from CPython Jinja2
 

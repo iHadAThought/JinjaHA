@@ -21,7 +21,7 @@ The Jinja2 runtime is **owned** as `JinjaCore` (vendored baseline from huggingfa
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/YOUR_ORG/JinjaHA.git", from: "0.1.0")
+    .package(url: "https://git.ghostnetwork.app/Brendan/JinjaHA.git", from: "0.1.0")
 ]
 ```
 
@@ -77,20 +77,39 @@ HATemplateMarkdown(
 )
 ```
 
+## Screenshots
+
+Side-by-side native engine vs SwiftUI presentation (`Examples/CompareDemo`):
+
+| States | Control flow |
+|--------|----------------|
+| ![States](Docs/screenshots/compare-states.png) | ![Control flow](Docs/screenshots/compare-controlFlow.png) |
+
+| Markdown card | Helpers |
+|---------------|---------|
+| ![Markdown](Docs/screenshots/compare-markdownCard.png) | ![Helpers](Docs/screenshots/compare-helpers.png) |
+
+Regenerate:
+
+```bash
+swift run CompareDemo --export-screenshots Docs/screenshots
+```
+
 ## Feature matrix
 
 | Area | Support |
 |------|---------|
-| Jinja2 expressions / `if` / `for` / `set` / `macro` / filters / tests | Via swift-jinja |
+| Jinja2 expressions / `if` / `for` / `set` / `macro` / filters / tests | Local (`JinjaCore`) |
+| `{% raw %}` / `{% with %}` / `{% include %}` / `{% extends %}` / import | Local (`JinjaCore`; loader required for include/extends) |
 | `states()`, `is_state`, `is_state_attr`, `state_attr`, `has_value` | Local |
-| Dotted `states.domain.object` | Local (prints state; use `.state` / attributes on the object) |
-| `\| states` filter | Local (same function as `states(...)`) |
+| Dotted `states.domain.object` (+ print → state) | Local |
+| `\| states` filter | Local |
+| `iif`, `is_number`, `slugify`, `average`, regex helpers, `floor_entities` | Local |
 | `expand`, `selectattr` / `rejectattr` / `map` / `join` | Local (`expand` HA-aware; collection filters via Jinja) |
 | Areas / devices / floors / labels helpers | Local (from `HAStateSnapshot` registries) |
 | Datetime (`now`, `utcnow`, `as_timestamp`, `timedelta`, `time_since`, `today_at`, …) | Local |
 | `to_json` / `from_json` | Local |
 | `POST /api/template` | `HAAPITemplateRenderer` |
-| `{% extends %}` / `{% include %}` / `{% with %}` / `{% raw %}` | Unsupported locally — use API fallback |
 | Arbitrary Python methods on HA objects | Unsupported |
 | HACS custom Jinja | Unsupported |
 
@@ -98,13 +117,18 @@ HATemplateMarkdown(
 
 - Template / output byte caps and `range()` size limits (`HATemplateLimits`)
 - Optional render timeout
-- No filesystem template includes
+- Default deny-all `TemplateLoader` (no filesystem includes unless you install an allowlist)
+- `AttributePolicy` blocks `_`-prefixed attribute access by default
 - API client never logs the bearer token; error bodies scrub the token
 
-## Example
+## Examples
 
 ```bash
+# CLI render smoke test
 swift run MinimalRender
+
+# macOS side-by-side demo (native Text vs SwiftUI)
+swift run CompareDemo
 ```
 
 ## Tests

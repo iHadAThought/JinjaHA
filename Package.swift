@@ -14,6 +14,7 @@ let package = Package(
         .library(name: "JinjaHA", targets: ["JinjaHA"]),
         .library(name: "JinjaHASwiftUI", targets: ["JinjaHASwiftUI"]),
         .executable(name: "MinimalRender", targets: ["MinimalRender"]),
+        .executable(name: "CompareDemo", targets: ["CompareDemo"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-collections.git", from: "1.0.0"),
@@ -38,6 +39,14 @@ let package = Package(
             name: "MinimalRender",
             dependencies: ["JinjaHA"],
             path: "Examples/MinimalRender"
+        ),
+        .executableTarget(
+            name: "CompareDemo",
+            dependencies: ["JinjaHA", "JinjaHASwiftUI"],
+            path: "Examples/CompareDemo",
+            swiftSettings: [
+                .unsafeFlags(["-parse-as-library"]),
+            ]
         ),
         .testTarget(
             name: "JinjaCoreTests",

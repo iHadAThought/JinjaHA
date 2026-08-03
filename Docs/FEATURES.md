@@ -48,6 +48,5 @@ Legend: **Supported** · **Partial** · **Unsupported** · **API-fallback** (HA 
 
 | Area | Location |
 |------|----------|
-| Dialect goldens | `Compatibility/jinja-3.1/` |
-| HA helper goldens | `Compatibility/home-assistant/` + `Fixtures/templates/` |
-| Unit suites | `Tests/JinjaCoreTests`, `JinjaHATests`, `JinjaHASwiftUITests` |
+| Test corpus | `Compatibility/`, `Fixtures/`, `Tests/*` |
+| CompareDemo | `Examples/CompareDemo` + `Docs/screenshots/` |

@@ -38,6 +38,15 @@ Registered via Environment registries: `iif`, `is_number`, `is_defined`, `slugif
 - `Tests/JinjaHATests` — goldens under Fixtures/templates + Compatibility/home-assistant
 - `Tests/JinjaHASwiftUITests` — last-good, cancel, re-render
 
+## CompareDemo (Phase 6)
+
+```bash
+swift run CompareDemo
+swift run CompareDemo --export-screenshots Docs/screenshots
+```
+
+macOS side-by-side: native `HATemplateEngine` output vs `HATemplateText` / `HATemplateMarkdown`.
+
 
 ## Environment merge
 
