@@ -1,7 +1,7 @@
 import SwiftUI
 import JinjaHA
 
-/// Renders a Jinja template to markdown (`AttributedString`), including tables.
+/// Renders a Jinja template to markdown, including GFM pipe tables.
 public struct HATemplateMarkdown: View {
     private let template: String
     private let refreshToken: String
@@ -27,7 +27,7 @@ public struct HATemplateMarkdown: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(markdownAttributed)
+            MarkdownDocumentView(source: model.displayText)
             if let errorMessage = model.errorMessage {
                 Text(errorMessage)
                     .font(.caption)
@@ -39,22 +39,5 @@ public struct HATemplateMarkdown: View {
             model.refreshToken = refreshToken
             await model.renderIfNeeded()
         }
-    }
-
-    private var markdownAttributed: AttributedString {
-        let text = model.displayText
-        if let parsed = try? AttributedString(
-            markdown: text,
-            options: .init(interpretedSyntax: .full)
-        ) {
-            return parsed
-        }
-        if let parsed = try? AttributedString(
-            markdown: text,
-            options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-        ) {
-            return parsed
-        }
-        return AttributedString(text)
     }
 }

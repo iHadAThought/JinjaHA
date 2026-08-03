@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import JinjaHASwiftUI
 import SwiftUI
 
 /// Renders static side-by-side panes (pre-evaluated) so exports don't race async SwiftUI tasks.
@@ -17,7 +18,7 @@ enum ScreenshotExporter {
                 swiftUIOutput: output,
                 markdown: scenario.usesMarkdown
             )
-            .frame(width: 920, height: 520)
+            .frame(width: 920, height: 560)
 
             let data = try renderPNG(view: view, scale: 2)
             let fileURL = directory.appendingPathComponent(scenario.screenshotFilename)
@@ -79,11 +80,11 @@ private struct ScreenshotCard: View {
                 .foregroundStyle(.secondary)
 
             HStack(alignment: .top, spacing: 14) {
-                column(title: "Native engine", body: nativeOutput, mono: true)
+                column(title: "Native engine", body: nativeOutput, asMarkdown: false)
                 column(
                     title: markdown ? "SwiftUI markdown" : "SwiftUI text",
                     body: swiftUIOutput,
-                    mono: !markdown
+                    asMarkdown: markdown
                 )
             }
 
@@ -102,23 +103,19 @@ private struct ScreenshotCard: View {
         .background(Color(nsColor: .windowBackgroundColor))
     }
 
-    private func column(title: String, body: String, mono: Bool) -> some View {
+    private func column(title: String, body: String, asMarkdown: Bool) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.headline)
             Group {
-                if markdown, title.contains("markdown"),
-                   let attributed = try? AttributedString(
-                    markdown: body,
-                    options: .init(interpretedSyntax: .full)
-                   ) {
-                    Text(attributed)
+                if asMarkdown {
+                    MarkdownDocumentView(source: body)
                 } else {
                     Text(body)
-                        .font(mono ? .body.monospaced() : .body)
+                        .font(.body.monospaced())
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: 180, alignment: .topLeading)
+            .frame(maxWidth: .infinity, minHeight: 200, alignment: .topLeading)
             .padding(12)
             .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
             .overlay(
