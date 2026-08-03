@@ -1,0 +1,27 @@
+{% set s = states.sensor.townofcary_shift_audit %}
+### Shift changes
+Newest first
+{% if s is none or s.state in ['unknown', 'unavailable'] %}
+Waiting for WhenToWork data.
+{% else %}
+{% set changes = s.attributes.changes or [] %}
+{{ changes | length }} change{{ '' if changes | length == 1 else 's' }} logged
+{% if changes | length == 0 %}
+No changes detected yet.
+{% else %}
+{% for c in changes %}
+{% set label = 'ADDED' if c.change_type == 'added' else ('REMOVED' if c.change_type == 'removed' else 'CHANGED') %}
+- **[{{ label }}]** {{ c.summary }}{% if c.detected_at %} _({{ c.detected_at.replace('T', ' ')[:19] }})_{% endif %}
+{% if c.change_type == 'modified' and c.before and c.after %}
+  {% set b = c.before %}
+  {% set a = c.after %}
+  {% set b_start = b.start | as_datetime %}
+  {% set a_start = a.start | as_datetime %}
+  {% set b_end = b.end | as_datetime %}
+  {% set a_end = a.end | as_datetime %}
+  - Original: {{ b.position or '—' }}{% if b_start %} · {{ b_start.strftime('%-I:%M %p') }}–{{ b_end.strftime('%-I:%M %p') if b_end else '—' }}{% endif %} · {{ b.paid_hours if b.paid_hours is not none else '—' }}h
+  - Updated: {{ a.position or '—' }}{% if a_start %} · {{ a_start.strftime('%-I:%M %p') }}–{{ a_end.strftime('%-I:%M %p') if a_end else '—' }}{% endif %} · {{ a.paid_hours if a.paid_hours is not none else '—' }}h
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endif %}

@@ -747,7 +747,8 @@ public enum Filters {
         return .string(components.filter { !$0.isEmpty }.joined(separator: " "))
     }
 
-    /// Basic string formatting.
+    /// Basic string formatting (Python/printf-style for Lovelace boards).
+    /// Supports `%s`, `%d`, and float forms such as `%.1f` / `%+.2f`.
     @Sendable public static func format(
         _ args: [Value],
         kwargs: [String: Value] = [:],
@@ -771,22 +772,23 @@ public enum Filters {
         var argIdx = 0
         while formatIdx < formatString.endIndex {
             let char = formatString[formatIdx]
-            if char == "%", argIdx < formatArgs.count {
+            if char == "%" {
                 let nextIdx = formatString.index(after: formatIdx)
-                if nextIdx < formatString.endIndex {
-                    let specifier = formatString[nextIdx]
-                    if specifier == "s" {
-                        result += formatArgs[argIdx].description
-                        argIdx += 1
-                    } else {
-                        result.append("%")
-                        result.append(specifier)
-                    }
-                    formatIdx = formatString.index(after: nextIdx)
-                } else {
+                if nextIdx < formatString.endIndex, formatString[nextIdx] == "%" {
                     result.append("%")
-                    formatIdx = nextIdx
+                    formatIdx = formatString.index(after: nextIdx)
+                    continue
                 }
+                if argIdx < formatArgs.count,
+                   let parsed = parsePrintfSpecifier(formatString, from: formatIdx)
+                {
+                    result += applyPrintfSpecifier(parsed.specifier, to: formatArgs[argIdx])
+                    argIdx += 1
+                    formatIdx = parsed.endIndex
+                    continue
+                }
+                result.append("%")
+                formatIdx = nextIdx
             } else {
                 result.append(char)
                 formatIdx = formatString.index(after: formatIdx)
@@ -2045,6 +2047,70 @@ public enum Filters {
 }
 
 // MARK: -
+
+private struct PrintfParseResult {
+    let specifier: String
+    let endIndex: String.Index
+}
+
+/// Parses a single printf-style conversion starting at `%`.
+private func parsePrintfSpecifier(_ format: String, from start: String.Index) -> PrintfParseResult? {
+    guard start < format.endIndex, format[start] == "%" else { return nil }
+    var i = format.index(after: start)
+    guard i < format.endIndex else { return nil }
+
+    // flags
+    while i < format.endIndex, "+-#0 ".contains(format[i]) {
+        i = format.index(after: i)
+    }
+    // width
+    while i < format.endIndex, format[i].isNumber {
+        i = format.index(after: i)
+    }
+    // precision
+    if i < format.endIndex, format[i] == "." {
+        i = format.index(after: i)
+        while i < format.endIndex, format[i].isNumber {
+            i = format.index(after: i)
+        }
+    }
+    guard i < format.endIndex else { return nil }
+    let conversion = format[i]
+    guard "diouxXeEfFgGcs".contains(conversion) else { return nil }
+    let end = format.index(after: i)
+    return PrintfParseResult(specifier: String(format[start..<end]), endIndex: end)
+}
+
+private func applyPrintfSpecifier(_ specifier: String, to value: Value) -> String {
+    switch specifier.last {
+    case "s", "c":
+        return value.description
+    case "d", "i", "u", "o", "x", "X":
+        let intValue: Int = {
+            switch value {
+            case .int(let i): return i
+            case .double(let d): return Int(d)
+            case .string(let s): return Int(s) ?? Int(Double(s) ?? 0)
+            case .boolean(let b): return b ? 1 : 0
+            default: return 0
+            }
+        }()
+        return String(format: specifier, intValue)
+    case "f", "F", "e", "E", "g", "G":
+        let doubleValue: Double = {
+            switch value {
+            case .double(let d): return d
+            case .int(let i): return Double(i)
+            case .string(let s): return Double(s) ?? 0
+            case .boolean(let b): return b ? 1 : 0
+            default: return 0
+            }
+        }()
+        return String(format: specifier, doubleValue)
+    default:
+        return value.description
+    }
+}
 
 /// Returns the string form of a value, matching Jinja2's `soft_str`.
 ///

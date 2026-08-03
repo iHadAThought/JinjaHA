@@ -1,0 +1,128 @@
+[
+  {
+    "entity_id": "sensor.townofcary_shift_audit",
+    "state": "12",
+    "attributes": {
+      "friendly_name": "Town of Cary Shift Audit",
+      "upcoming_count": 2,
+      "past_count": 1,
+      "change_count": 2,
+      "modified_count": 1,
+      "manual_shifts": [
+        {
+          "date": "2026-08-01",
+          "start_time": "09:00",
+          "end_time": "17:00",
+          "paid_hours": 8.0,
+          "position": "Officer",
+          "shift_id": "manual-1"
+        }
+      ],
+      "modified_changes": [
+        {
+          "summary": "Shift hours edited",
+          "detected_at": "2026-07-15T14:30:00",
+          "before": {
+            "position": "Officer",
+            "start": "2026-07-10T09:00:00",
+            "end": "2026-07-10T17:00:00",
+            "paid_hours": 8.0,
+            "category": "regular"
+          },
+          "after": {
+            "position": "Officer",
+            "start": "2026-07-10T10:00:00",
+            "end": "2026-07-10T18:00:00",
+            "paid_hours": 8.0,
+            "category": "regular"
+          }
+        }
+      ],
+      "shifts": [
+        {
+          "date": "2026-07-01",
+          "start_time": "09:00",
+          "end_time": "17:00",
+          "paid_hours": 8.0,
+          "position": "Past shift"
+        },
+        {
+          "date": "2026-08-10",
+          "start_time": "08:00",
+          "end_time": "16:00",
+          "paid_hours": 8.0,
+          "position": "Desk"
+        },
+        {
+          "date": "2026-08-12",
+          "start_time": "12:00",
+          "end_time": "20:00",
+          "paid_hours": 8.0,
+          "position": "Patrol"
+        }
+      ],
+      "changes": [
+        {
+          "change_type": "added",
+          "summary": "Added Desk on 2026-08-10",
+          "detected_at": "2026-08-01T12:00:00"
+        },
+        {
+          "change_type": "modified",
+          "summary": "Shift hours edited",
+          "detected_at": "2026-07-15T14:30:00",
+          "before": {
+            "position": "Officer",
+            "start": "2026-07-10T09:00:00",
+            "end": "2026-07-10T17:00:00",
+            "paid_hours": 8.0
+          },
+          "after": {
+            "position": "Officer",
+            "start": "2026-07-10T10:00:00",
+            "end": "2026-07-10T18:00:00",
+            "paid_hours": 8.0
+          }
+        }
+      ]
+    },
+    "last_changed": "2026-08-02T12:00:00+00:00",
+    "last_updated": "2026-08-02T12:00:00+00:00"
+  },
+  {
+    "entity_id": "sensor.paycheck_hours_audit",
+    "state": "0.5",
+    "attributes": {
+      "friendly_name": "Paycheck Hours Audit",
+      "latest_check_date": "2026-07-25",
+      "comparisons": [
+        {
+          "check_date": "2026-07-25",
+          "period_start": "2026-07-11",
+          "period_end": "2026-07-24",
+          "whentowork_hours": 80.0,
+          "paycheck_hours": 79.5,
+          "difference_hours": 0.5
+        },
+        {
+          "check_date": "2026-07-11",
+          "period_start": "2026-06-27",
+          "period_end": "2026-07-10",
+          "whentowork_hours": 72.0,
+          "paycheck_hours": 72.0,
+          "difference_hours": 0.0
+        },
+        {
+          "check_date": "2025-12-20",
+          "period_start": "2025-12-06",
+          "period_end": "2025-12-19",
+          "whentowork_hours": 80.0,
+          "paycheck_hours": 80.0,
+          "difference_hours": 0.0
+        }
+      ]
+    },
+    "last_changed": "2026-08-02T12:00:00+00:00",
+    "last_updated": "2026-08-02T12:00:00+00:00"
+  }
+]

@@ -1,0 +1,19 @@
+{% set s = states.sensor.townofcary_shift_audit %}
+### Upcoming shifts
+{% if s is none or s.state in ['unknown', 'unavailable'] %}
+Waiting for WhenToWork data.
+{% else %}
+{% set today = now().date().isoformat() %}
+{% set upcoming = (s.attributes.shifts or [])
+     | selectattr('date')
+     | selectattr('date', 'ge', today)
+     | list %}
+Next {{ [upcoming | length, 10] | min }} of {{ upcoming | length }}
+{% if upcoming | length == 0 %}
+No upcoming shifts.
+{% else %}
+{% for sh in upcoming[:10] %}
+- **{{ sh.date }}** {{ sh.start_time }}–{{ sh.end_time }} · {{ '%.1f' | format(sh.paid_hours | float(0)) }}h · {{ sh.position }}
+{% endfor %}
+{% endif %}
+{% endif %}

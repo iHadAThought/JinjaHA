@@ -1,0 +1,26 @@
+{% set s = states.sensor.paycheck_hours_audit %}
+{% set today = now().date().isoformat() %}
+### Past paychecks
+2026 · newest first
+{% if s is none or s.state in ['unknown', 'unavailable'] %}
+No paycheck audits yet.
+{% else %}
+{% set rows = (s.attributes.comparisons or [])
+     | sort(attribute='check_date', reverse=true)
+     | list %}
+{% set past = rows
+     | selectattr('check_date')
+     | selectattr('check_date', 'ge', '2026-01-01')
+     | selectattr('check_date', 'le', today)
+     | list %}
+{{ past | length }} audits
+{% if past | length == 0 %}
+No paychecks yet.
+{% else %}
+| Check date | Pay period | WTW h | Pay h | Δ |
+| --- | --- | ---: | ---: | ---: |
+{%- for r in past %}
+| {{ r.check_date }} | {{ r.period_start }} → {{ r.period_end }} | {{ '%.2f' | format(r.whentowork_hours | float(0)) }} | {{ '%.2f' | format(r.paycheck_hours | float(0)) }} | {{ '%+.2f' | format(r.difference_hours | float(0)) }} |
+{%- endfor %}
+{% endif %}
+{% endif %}

@@ -14,9 +14,16 @@ enum HAGlobals {
 
         env["now"] = .function(makeNow(snapshot: snapshot, utc: false))
         env["utcnow"] = .function(makeNow(snapshot: snapshot, utc: true))
-        env["as_timestamp"] = .function(makeAsTimestamp(snapshot: snapshot))
-        env["as_datetime"] = .function(makeAsDatetime(snapshot: snapshot))
-        env["as_local"] = .function(makeAsLocal(snapshot: snapshot))
+        let asTimestamp = makeAsTimestamp(snapshot: snapshot)
+        let asDatetime = makeAsDatetime(snapshot: snapshot)
+        let asLocal = makeAsLocal(snapshot: snapshot)
+        env["as_timestamp"] = .function(asTimestamp)
+        env["as_datetime"] = .function(asDatetime)
+        env["as_local"] = .function(asLocal)
+        // Board templates commonly use filter form: `value | as_datetime`
+        env.registerFilter("as_timestamp", asTimestamp)
+        env.registerFilter("as_datetime", asDatetime)
+        env.registerFilter("as_local", asLocal)
         env["as_timedelta"] = .function(makeAsTimedelta())
         env["timedelta"] = .function(makeTimedelta())
         env["time_since"] = .function(makeTimeSince(snapshot: snapshot, until: false))
@@ -365,7 +372,7 @@ enum HAGlobals {
             }
             let formatter = DateFormatter()
             formatter.locale = Locale(identifier: "en_US_POSIX")
-            formatter.dateFormat = pythonFormatToDateFormat(format)
+            formatter.dateFormat = jinjaPythonStrftimeToDateFormat(format)
             guard let date = formatter.date(from: text) else { return .null }
             return .datetime(date, timeZone: TimeZone.current)
         }
@@ -690,12 +697,20 @@ func parseDate(_ value: Value, snapshot: HAStateSnapshot) -> Date? {
         let fractional = ISO8601DateFormatter()
         fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         if let date = fractional.date(from: string) { return date }
-        // Treat bare datetime-looking strings as local.
+        // Treat bare datetime-looking strings as local (common in entity attributes).
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = snapshot.timeZone
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        return formatter.date(from: string)
+        for pattern in [
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS",
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy-MM-dd",
+        ] {
+            formatter.dateFormat = pattern
+            if let date = formatter.date(from: string) { return date }
+        }
+        return nil
     default:
         return nil
     }
@@ -749,19 +764,9 @@ func parseISO8601Duration(_ text: String) -> Double? {
 }
 
 func pythonFormatToDateFormat(_ format: String) -> String {
-    format
-        .replacingOccurrences(of: "%Y", with: "yyyy")
-        .replacingOccurrences(of: "%m", with: "MM")
-        .replacingOccurrences(of: "%d", with: "dd")
-        .replacingOccurrences(of: "%H", with: "HH")
-        .replacingOccurrences(of: "%M", with: "mm")
-        .replacingOccurrences(of: "%S", with: "ss")
+    jinjaPythonStrftimeToDateFormat(format)
 }
 
 func strftime(_ format: String, date: Date, timeZone: TimeZone) -> String {
-    let formatter = DateFormatter()
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = timeZone
-    formatter.dateFormat = pythonFormatToDateFormat(format)
-    return formatter.string(from: date)
+    jinjaStrftime(format, date: date, timeZone: timeZone)
 }

@@ -1,0 +1,18 @@
+{% set s = states.sensor.townofcary_shift_audit %}
+### Manual shifts
+{% if s is none or s.state in ['unknown', 'unavailable'] %}
+Waiting for WhenToWork data.
+{% else %}
+{% set manual = s.attributes.manual_shifts or [] %}
+{{ manual | length }} manual · counted in PayMaster hours audit
+
+{% if manual | length == 0 %}
+None yet — use **Add manual shift** above.
+{% else %}
+| Date | Time | Hours | Position | ID |
+| --- | --- | ---: | --- | --- |
+{%- for sh in manual %}
+| {{ sh.date }} | {{ sh.start_time }}–{{ sh.end_time }} | {{ '%.1f' | format(sh.paid_hours | float(0)) }} | {{ sh.position }} | `{{ sh.shift_id }}` |
+{%- endfor %}
+{% endif %}
+{% endif %}

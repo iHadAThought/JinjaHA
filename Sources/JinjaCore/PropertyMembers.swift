@@ -60,10 +60,17 @@ public enum PropertyMembers {
             return .current
         }()
 
+        let dateOnly = {
+            if case .boolean(true) = obj[.string(JinjaDateTimeKeys.datetimeDateOnly)] {
+                return true
+            }
+            return false
+        }()
+
         switch propertyName {
         case "isoformat":
             let fn: @Sendable ([Value], [String: Value], Environment) throws -> Value = { _, _, _ in
-                .string(formatJinjaDateTime(date, timeZone: tz))
+                .string(formatJinjaDateTime(date, timeZone: tz, dateOnly: dateOnly))
             }
             return .function(fn)
         case "timestamp":
@@ -76,7 +83,7 @@ public enum PropertyMembers {
                 var calendar = Calendar(identifier: .gregorian)
                 calendar.timeZone = tz
                 let day = calendar.startOfDay(for: date)
-                return .datetime(day, timeZone: tz)
+                return .datetime(day, timeZone: tz, dateOnly: true)
             }
             return .function(fn)
         case "time":
@@ -95,6 +102,20 @@ public enum PropertyMembers {
             // Also available as attribute; method form for Python parity.
             let fn: @Sendable ([Value], [String: Value], Environment) throws -> Value = { _, _, _ in
                 obj[.string("weekday")] ?? .int(0)
+            }
+            return .function(fn)
+        case "strftime":
+            let fn: @Sendable ([Value], [String: Value], Environment) throws -> Value = { args, kwargs, _ in
+                let arguments = try resolveCallArguments(
+                    args: args,
+                    kwargs: kwargs,
+                    parameters: ["format"],
+                    defaults: [:]
+                )
+                guard case let .string(format) = arguments["format"] else {
+                    throw JinjaError.runtime("strftime() requires a format string")
+                }
+                return .string(jinjaStrftime(format, date: date, timeZone: tz))
             }
             return .function(fn)
         default:

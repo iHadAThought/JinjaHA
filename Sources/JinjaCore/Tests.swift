@@ -39,6 +39,8 @@ public enum Tests {
     }
 
     /// Tests if the input is none/null.
+    ///
+    /// Matches Jinja2: both `null`/`None` and undefined values pass `is none`.
     @Sendable public static func none(
         _ args: [Value],
         kwargs: [String: Value] = [:],
@@ -50,8 +52,8 @@ public enum Tests {
             parameters: ["value"]
         )
 
-        guard let input = arguments["value"] else { return false }
-        return input.isNull
+        guard let input = arguments["value"] else { return true }
+        return input.isNull || input.isUndefined
     }
 
     /// Tests if the input is a string.
