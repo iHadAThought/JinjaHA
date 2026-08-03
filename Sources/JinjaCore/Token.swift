@@ -148,6 +148,14 @@ public struct Token: Hashable, Sendable {
         case `import`
         /// Selective import keyword `from`.
         case from
+        /// Expression statement keyword `do` (evaluate, no output).
+        case `do`
+        /// Debug dump keyword `debug`.
+        case debug
+        /// Gettext-style translation block keyword `trans`.
+        case trans
+        /// End of translation block keyword `endtrans`.
+        case endtrans
         /// Comment content `{# ... #}`.
         case comment
         /// End of file marker.

@@ -20,7 +20,7 @@ The Jinja2 runtime is **owned** as `JinjaCore` (vendored baseline from huggingfa
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/iHadAThought/JinjaHA.git", from: "0.1.0")
+    .package(url: "https://github.com/iHadAThought/JinjaHA.git", from: "0.2.0")
 ]
 ```
 
@@ -33,6 +33,22 @@ dependencies: [
     ]
 )
 ```
+
+## Hybrid app pattern
+
+JinjaHA is designed as an **independent library**. Your app owns the HA connection and fills `HAStateSnapshot` (entities, registries, TZ, home lat/lon, optional `entityMeta` / repairs / translations). Rendering stays:
+
+1. **Local** — `LocalTemplateRenderer(snapshot:)` for documented HA Jinja
+2. **Fallback** — `FallbackTemplateRenderer` → `HAAPITemplateRenderer` for HACS / custom Python / anything local cannot evaluate
+
+```swift
+let local = LocalTemplateRenderer(snapshot: snapshot)
+let api = HAAPITemplateRenderer(baseURL: haURL, token: token)
+let hybrid = FallbackTemplateRenderer(primary: local, fallback: api)
+let rendered = try await hybrid.render(template)
+```
+
+See [`Docs/FEATURES.md`](Docs/FEATURES.md) for the helper matrix and permanent API-fallback boundary (TD-009).
 
 ## Quick start
 
@@ -52,16 +68,6 @@ let snapshot = HAStateSnapshot(
 let engine = HATemplateEngine(snapshot: snapshot)
 let text = try engine.render("{{ states('sensor.temp') }} °C")
 // "22 °C"
-```
-
-### Render backends
-
-```swift
-let local = LocalTemplateRenderer(snapshot: snapshot)
-let api = HAAPITemplateRenderer(baseURL: haURL, token: token)
-let hybrid = FallbackTemplateRenderer(primary: local, fallback: api)
-
-let rendered = try await hybrid.render(template)
 ```
 
 ### SwiftUI
@@ -98,19 +104,19 @@ swift run CompareDemo --export-screenshots Docs/screenshots
 
 | Area | Support |
 |------|---------|
-| Jinja2 expressions / `if` / `for` / `set` / `macro` / filters / tests | Local (`JinjaCore`) |
+| Jinja2 expressions / `if` / `for` / `set` / `macro` / `do` / `debug` / `trans` | Local (`JinjaCore`) |
 | `{% raw %}` / `{% with %}` / `{% include %}` / `{% extends %}` / import | Local (`JinjaCore`; loader required for include/extends) |
 | `states()`, `is_state`, `is_state_attr`, `state_attr`, `has_value` | Local |
 | Dotted `states.domain.object` (+ print → state) | Local |
-| `\| states` filter | Local |
-| `iif`, `is_number`, `slugify`, `average`, regex helpers, `floor_entities` | Local |
-| `expand`, `selectattr` / `rejectattr` / `map` / `join` | Local (`expand` HA-aware; collection filters via Jinja) |
+| Registry: `is_hidden_entity`, `entity_name`, `integration_entities`, `config_entry_*` | Local (from `entityMeta` / `configEntries`) |
+| Repairs / translations | Local (`repairIssues` / `translationStrings`) |
+| Encoding: `pack`/`unpack`/`from_hex`/`sha1`/`sha512`/… | Local |
+| Math / functional / set ops (`clamp`, `zip`, `union`, …) | Local |
 | Areas / devices / floors / labels helpers | Local (from `HAStateSnapshot` registries) |
-| Datetime (`now`, `utcnow`, `as_timestamp`, `timedelta`, `time_since`, `today_at`, …) | Local |
+| Datetime (`now`, `utcnow`, `as_timestamp`, `timedelta`, `strftime`, …) | Local |
 | `to_json` / `from_json` | Local |
-| `POST /api/template` | `HAAPITemplateRenderer` |
-| Arbitrary Python methods on HA objects | Unsupported |
-| HACS custom Jinja | Unsupported |
+| `POST /api/template` hybrid fallback | `FallbackTemplateRenderer` |
+| HACS / custom Jinja / arbitrary Python methods | Permanent API-fallback |
 
 ## Security
 

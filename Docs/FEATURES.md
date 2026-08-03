@@ -2,6 +2,10 @@
 
 Legend: **Supported** · **Partial** · **Unsupported** · **API-fallback** (HA REST)
 
+## Product goal
+
+JinjaHA is a **standalone SPM library** that implements as much of Home Assistant’s documented Jinja/template surface as is practical in Swift. Hybrid apps fill `HAStateSnapshot` and use `LocalTemplateRenderer` + `FallbackTemplateRenderer` → `/api/template`.
+
 ## JinjaCore
 
 | Feature | Status | Notes |
@@ -13,49 +17,43 @@ Legend: **Supported** · **Partial** · **Unsupported** · **API-fallback** (HA 
 | `TemplateLoader` (deny-all default) | Supported | Deny-all by default; `DictionaryTemplateLoader` for allowlists |
 | `AttributePolicy` (blocks `_` names) | Supported | Wired into member access + `|attr` |
 | `range` override without preprocess | Supported | HA registers capped `range` via merge |
-| `{% raw %}` / `{% endraw %}` | Supported | Phase 2 — lexer collapses to literal text |
-| `{% with %}` / `{% endwith %}` | Supported | Phase 2 — scoped assignments |
-| `{% include %}` | Supported | Phase 2 — `ignore missing`, `with`/`without context` |
-| `{% extends %}` / `{% block %}` / `super()` | Supported | Phase 2 — child overrides via loader |
-| `{% import %}` / `{% from ... import %}` | Supported | Phase 2 — macros into namespace or aliases |
-| Callable objects | Supported | Phase 3 — `Value.object(..., call:)` |
-| Custom object stringify | Supported | Phase 3 — `stringRepresentation` |
-| Datetime / timedelta values | Supported | `Value.datetime` / `Value.timedelta`; `+`/`-` arithmetic; `strftime`; date-only `isoformat` |
-| `{% do %}` | Unsupported | Optional backlog — **gated on real-board failure**, not feature completeness |
-| `{% debug %}` | Unsupported | Optional backlog — gated on real-board failure |
-| Line statements / `{% trans %}` i18n | Unsupported | Optional backlog — gated on real-board failure |
+| `{% raw %}` / `{% endraw %}` | Supported | |
+| `{% with %}` / `{% endwith %}` | Supported | |
+| `{% include %}` / `{% extends %}` / `{% block %}` / `super()` | Supported | |
+| `{% import %}` / `{% from ... import %}` | Supported | |
+| Callable objects / custom stringify | Supported | |
+| Datetime / timedelta values | Supported | `strftime`; date-only `isoformat` |
+| `{% do %}` | Supported | Evaluates expression; no output |
+| `{% debug %}` | Supported | Dumps defined context keys |
+| `{% trans %}` / `{% endtrans %}` | Supported | Renders body; optional `HAStateSnapshot.translationStrings` lookup by msgid |
 
-## JinjaHA
+## JinjaHA — helper coverage (catalog-driven)
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| `states()` / `is_state` / `state_attr` / `has_value` / `expand` | Supported | Callable object — no preprocess |
-| `\| states` filter | Supported | Same function as `states(...)` |
-| `states.domain.object` + print → state | Supported | Entity `stringRepresentation` |
-| `iif` / `is_number` / `is_defined` | Supported | Phase 4 — function, filter, and tests |
-| `slugify` / `average` | Supported | Phase 4 |
-| `regex_match` / `search` / `replace` / `findall` | Supported | Phase 4 (+ `match`/`search` tests) |
-| `floor_entities` | Supported | Phase 4 |
-| `labels()` overload | Supported | All labels, or labels for entity/device/area |
-| Areas / devices / floors / labels | Supported | Core registry helpers present |
-| Datetime objects | Supported | `now`/`utcnow`/`as_datetime`/`today_at`/`strptime` return datetime; `\| as_datetime` filter; `strftime`; `last_changed`/`last_updated` too |
-| Timedelta + `total_seconds()` | Supported | `timedelta(...)` / `as_timedelta`; datetime−datetime → timedelta |
-| `relative_time` / `time_since` / `time_until` | Supported | Humanized strings |
-| Math extras (`pi`/`e`/`log`/`sin`/`cos`/`tan`/`sqrt`) | Supported | |
-| Geo (`distance` / `closest`) | Supported | Needs `HAStateSnapshot.latitude`/`longitude` (+ entity lat/lon attrs) |
-| Encoding / hash (`base64_*` / `md5` / `sha256` / `urlencode`) | Supported | |
-| `POST /api/template` | Supported | **Permanent API-fallback** via `FallbackTemplateRenderer` for HACS / arbitrary Python / full CPython sandbox |
-| Inheritance / raw / with / include / import | Supported | Phase 2 in JinjaCore (loader still required for include/extends) |
-| Translations / repairs helpers | Unsupported | Optional backlog — gated on real-board failure; otherwise API-fallback |
-| HACS / custom Jinja / arbitrary Python methods | API-fallback | **Permanent** — do not chase a CPython sandbox; keep hybrid Local → `/api/template` |
-| Speculative helpers (`is_hidden_entity`, `pack`/`unpack`, …) | Unsupported | Optional backlog — **only if a real-board golden fails without them** |
+Source of truth: [HA template functions](https://www.home-assistant.io/template-functions/).
+
+| Category | Status | Notes |
+|----------|--------|-------|
+| States | Supported | `states`, `is_state`, `is_state_attr`, `state_attr`, `has_value`, `expand` |
+| Areas / devices / floors / labels | Supported | Core registry helpers |
+| Date & time | Supported | `now`/`utcnow`/`as_*`/`timedelta`/`strptime`/`timestamp_*`/`today_at`/`relative_time`/`time_since`/`time_until` |
+| Encoding / hash | Supported | `base64_*`, `md5`, `sha1`, `sha256`, `sha512`, `urlencode`, `from_hex`, `pack`, `unpack` |
+| Entities / registry | Supported | `entity_name`, `is_hidden_entity`, `integration_entities`, `config_entry_id`, `config_entry_attr` (needs snapshot meta) |
+| Repairs | Supported | `issues` / `issue` from `HAStateSnapshot.repairIssues` |
+| Translations | Supported | `state_translated` / `state_attr_translated` (+ `{% trans %}`) |
+| Math | Supported | `pi`/`e`/`log`/`sin`/`cos`/`tan`/`sqrt`/`acos`/`asin`/`atan`/`atan2`/`clamp`/`bitwise_*`/`median`/`average` |
+| Functional | Supported | `iif`, `apply`, `zip`, `version`, `ord`, `contains` (+ JinjaCore `namespace`/`cycler`/`joiner`/`lipsum`/`dict`/`range`) |
+| Collections extras | Supported | set ops, `flatten`, `combine`, `shuffle`, `merge_response` (+ JinjaCore `batch`/`slice`/`map`/…) |
+| Geo | Supported | `distance` / `closest` (needs home lat/lon) |
+| Regex / strings / JSON | Supported | Phase 4 helpers + `to_json`/`from_json` |
+| `POST /api/template` | Supported | Hybrid via `FallbackTemplateRenderer` |
+| HACS / custom Jinja / arbitrary Python methods | API-fallback | **Permanent** — never emulate a CPython sandbox |
 
 ## JinjaHASwiftUI
 
 | Feature | Status | Notes |
 |---------|--------|-------|
 | `HATemplateText` / `HATemplateMarkdown` last-good-render | Supported | |
-| GFM pipe tables in markdown | Supported | `MarkdownDocumentView` (Foundation markdown collapses tables) |
+| GFM pipe tables in markdown | Supported | `MarkdownDocumentView` |
 
 ## Version identity
 
@@ -73,10 +71,10 @@ Legend: **Supported** · **Partial** · **Unsupported** · **API-fallback** (HA 
 | Work Audit board goldens | `Compatibility/home-assistant/work_audit_*.jinja` + `Fixtures/snapshots/work_audit.json` |
 | Live local↔API parity | `LiveParityTests` (`HA_URL` + `HA_TOKEN`) |
 | CompareDemo | `Examples/CompareDemo` + `Docs/screenshots/` |
-| Upstream process | `Docs/COMPAT.md`, `Compatibility/TRACKED_DIFFERENCES.md`, `Scripts/check-compat-notes.sh` |
+| Upstream process | `Docs/COMPAT.md`, `Compatibility/TRACKED_DIFFERENCES.md` |
 
 ## Parity stance
 
-1. **Permanent API-fallback:** HACS integrations, arbitrary Python object methods, and a full CPython sandbox stay on `FallbackTemplateRenderer` / `POST /api/template`. Do not chase feature-complete Python emulation.
-2. **Board-driven hardening:** Add Compatibility goldens from real Lovelace boards; expand LiveParity; implement only gaps those goldens expose.
-3. **Optional backlog** (`{% do %}`, translations, repairs, `is_hidden_entity`, `pack`/`unpack`, …): gated on a failing real-board golden, not checklist completeness.
+1. **Library completeness:** Implement documented HA template helpers and needed Jinja statements in-process so hybrid apps stay thin.
+2. **Permanent API-fallback:** HACS integrations, custom Jinja packages, arbitrary Python object methods, and a full CPython sandbox stay on `FallbackTemplateRenderer` / `POST /api/template` (TD-009).
+3. **Validation:** Compatibility goldens + LiveParity + real Lovelace boards (e.g. Work Audit) verify behavior; the HA template-functions catalog drives the backlog.

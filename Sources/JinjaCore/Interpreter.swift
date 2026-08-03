@@ -41,6 +41,9 @@ public final class Environment: @unchecked Sendable {
     /// Stack of parent block bodies for `{{ super() }}`.
     var blockSuperStack: [[Node]] = []
 
+    /// Optional gettext-style string catalog for `{% trans %}` (msgid → msgstr).
+    public var translationCatalog: [String: String] = [:]
+
     // Options
 
     /// Whether leading spaces and tabs are stripped from the start of a line to a block.
@@ -75,6 +78,7 @@ public final class Environment: @unchecked Sendable {
             self.attributePolicy = parent.attributePolicy
             self.blockOverrides = parent.blockOverrides
             self.blockSuperStack = parent.blockSuperStack
+            self.translationCatalog = parent.translationCatalog
             self.lstripBlocks = parent.lstripBlocks
             self.trimBlocks = parent.trimBlocks
         } else if includeBuiltIns {
@@ -110,8 +114,20 @@ public final class Environment: @unchecked Sendable {
         self.attributePolicy = other.attributePolicy
         self.blockOverrides = other.blockOverrides
         self.blockSuperStack = other.blockSuperStack
+        self.translationCatalog = other.translationCatalog
         self.lstripBlocks = other.lstripBlocks
         self.trimBlocks = other.trimBlocks
+    }
+
+    /// Names defined in this environment (including inherited), for `{% debug %}`.
+    public var definedNames: [String] {
+        var names = Set(variables.keys)
+        var current = parent
+        while let env = current {
+            names.formUnion(env.variables.keys)
+            current = env.parent
+        }
+        return Array(names)
     }
 
     /// Gets or sets a variable in the environment.
@@ -716,6 +732,22 @@ public enum Interpreter {
                 }
             }
 
+        case let .do(expression):
+            _ = try evaluateExpression(expression, env: env)
+
+        case .debug:
+            let keys = env.definedNames.sorted().joined(separator: ", ")
+            buffer.append("{# debug: \(keys) #}")
+
+        case let .trans(body):
+            var inner = ""
+            try interpret(body, env: env, into: &inner)
+            if let translated = env.translationCatalog[inner] {
+                buffer.append(translated)
+            } else {
+                buffer.append(inner)
+            }
+
         case .break:
             throw ControlFlow.break
         case .continue:
@@ -781,7 +813,8 @@ public enum Interpreter {
 
         // These statements do not produce output directly or are handled elsewhere.
         case .if, .for, .program, .break, .continue, .call, .filter, .generation,
-            .raw, .with, .include, .extends, .block, .import, .fromImport:
+            .raw, .with, .include, .extends, .block, .import, .fromImport,
+            .do, .debug, .trans:
             break
         }
     }

@@ -2,6 +2,8 @@
 
 **JinjaHA** is a Swift package for Apple apps that connect to Home Assistant and need to evaluate Jinja2 templates locally (with optional HA REST `/api/template` fallback) and present results in SwiftUI.
 
+It aims to cover the documented HA template surface in-process; hybrid apps fill `HAStateSnapshot` and use `FallbackTemplateRenderer` for HACS/custom Python only.
+
 This product is **not** affiliated with or endorsed by the Home Assistant project.
 
 ## Products

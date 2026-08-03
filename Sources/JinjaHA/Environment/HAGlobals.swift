@@ -66,6 +66,9 @@ enum HAGlobals {
         HAHelpers.register(into: env, snapshot: snapshot)
         // Math / geo / encoding helpers used by dashboard markdown.
         HAExtraHelpers.register(into: env, snapshot: snapshot)
+        // Catalog-driven completeness (pack, registry, repairs, math extras, …).
+        HACatalogHelpers.register(into: env, snapshot: snapshot)
+        env.translationCatalog = snapshot.translationStrings
 
         // is_state as a test for select("is_state", "on") over entity IDs.
         env.registerTest("is_state", makeIsState(snapshot: snapshot))

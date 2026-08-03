@@ -4,7 +4,7 @@ public enum JinjaCoreInfo: Sendable {
     public static let dialectVersion = "3.1"
 
     /// Monotonic revision of the owned JinjaCore implementation.
-    public static let implementationRevision = 4
+    public static let implementationRevision = 5
 
     /// Provenance note for the original vendored sources (Apache-2.0).
     public static let vendoredFrom = "huggingface/swift-jinja 2.4.2 (vendored; now owned)"

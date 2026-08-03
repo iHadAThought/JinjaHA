@@ -10,6 +10,14 @@ public struct HAStateSnapshot: Sendable, Hashable, Codable {
     public var devices: [HADevice]
     public var floors: [HAFloor]
     public var labels: [HALabel]
+    /// Entity registry metadata for `is_hidden_entity`, `integration_entities`, config entries.
+    public var entityMeta: [String: HAEntityMeta]
+    /// Config entries keyed by entry id.
+    public var configEntries: [String: HAConfigEntry]
+    /// Repair issues for `issues()` / `issue()`.
+    public var repairIssues: [HARepairIssue]
+    /// Gettext-style msgid → msgstr for `{% trans %}` and translation helpers.
+    public var translationStrings: [String: String]
     public var timeZoneIdentifier: String
     public var now: Date?
     /// Home location for `distance` / `closest` (degrees). Optional until the app fills it.
@@ -23,6 +31,10 @@ public struct HAStateSnapshot: Sendable, Hashable, Codable {
         devices: [HADevice] = [],
         floors: [HAFloor] = [],
         labels: [HALabel] = [],
+        entityMeta: [String: HAEntityMeta] = [:],
+        configEntries: [String: HAConfigEntry] = [:],
+        repairIssues: [HARepairIssue] = [],
+        translationStrings: [String: String] = [:],
         timeZoneIdentifier: String = TimeZone.current.identifier,
         now: Date? = nil,
         latitude: Double? = nil,
@@ -34,6 +46,10 @@ public struct HAStateSnapshot: Sendable, Hashable, Codable {
         self.devices = devices
         self.floors = floors
         self.labels = labels
+        self.entityMeta = entityMeta
+        self.configEntries = configEntries
+        self.repairIssues = repairIssues
+        self.translationStrings = translationStrings
         self.timeZoneIdentifier = timeZoneIdentifier
         self.now = now
         self.latitude = latitude
@@ -78,6 +94,109 @@ public struct HAStateSnapshot: Sendable, Hashable, Codable {
             map[entity.entityID] = entity
         }
         return HAStateSnapshot(entities: map)
+    }
+}
+
+/// Entity-registry fields apps can supply for registry-aware helpers.
+public struct HAEntityMeta: Sendable, Hashable, Codable {
+    public var entityID: String
+    public var platform: String?
+    public var configEntryID: String?
+    public var hidden: Bool
+    public var name: String?
+    public var originalName: String?
+
+    public init(
+        entityID: String,
+        platform: String? = nil,
+        configEntryID: String? = nil,
+        hidden: Bool = false,
+        name: String? = nil,
+        originalName: String? = nil
+    ) {
+        self.entityID = entityID
+        self.platform = platform
+        self.configEntryID = configEntryID
+        self.hidden = hidden
+        self.name = name
+        self.originalName = originalName
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case entityID = "entity_id"
+        case platform
+        case configEntryID = "config_entry_id"
+        case hidden
+        case name
+        case originalName = "original_name"
+    }
+}
+
+public struct HAConfigEntry: Sendable, Hashable, Codable {
+    public var entryID: String
+    public var domain: String
+    public var title: String?
+    public var uniqueID: String?
+    public var attributes: [String: HAJSONValue]
+
+    public init(
+        entryID: String,
+        domain: String,
+        title: String? = nil,
+        uniqueID: String? = nil,
+        attributes: [String: HAJSONValue] = [:]
+    ) {
+        self.entryID = entryID
+        self.domain = domain
+        self.title = title
+        self.uniqueID = uniqueID
+        self.attributes = attributes
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case entryID = "entry_id"
+        case domain
+        case title
+        case uniqueID = "unique_id"
+        case attributes
+    }
+}
+
+public struct HARepairIssue: Sendable, Hashable, Codable {
+    public var domain: String
+    public var issueID: String
+    public var severity: String?
+    public var breaksInHAVersion: String?
+    public var isFixable: Bool
+    public var translationKey: String?
+    public var translationPlaceholders: [String: String]
+
+    public init(
+        domain: String,
+        issueID: String,
+        severity: String? = nil,
+        breaksInHAVersion: String? = nil,
+        isFixable: Bool = false,
+        translationKey: String? = nil,
+        translationPlaceholders: [String: String] = [:]
+    ) {
+        self.domain = domain
+        self.issueID = issueID
+        self.severity = severity
+        self.breaksInHAVersion = breaksInHAVersion
+        self.isFixable = isFixable
+        self.translationKey = translationKey
+        self.translationPlaceholders = translationPlaceholders
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case domain
+        case issueID = "issue_id"
+        case severity
+        case breaksInHAVersion = "breaks_in_ha_version"
+        case isFixable = "is_fixable"
+        case translationKey = "translation_key"
+        case translationPlaceholders = "translation_placeholders"
     }
 }
 

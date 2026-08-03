@@ -155,9 +155,38 @@ public struct Parser: Sendable {
         case .from:
             advance()
             return try parseFromImportStatement()
+        case .do:
+            advance()
+            return try parseDoStatement()
+        case .debug:
+            advance()
+            return try parseDebugStatement()
+        case .trans:
+            advance()
+            return try parseTransStatement()
         default:
             throw JinjaError.parser("Unknown statement: \(keywordToken.value)")
         }
+    }
+
+    private mutating func parseDoStatement() throws -> Statement {
+        let expression = try parseExpression()
+        try consume(.closeStatement, message: "Expected '%}' after do expression.")
+        return .do(expression)
+    }
+
+    private mutating func parseDebugStatement() throws -> Statement {
+        try consume(.closeStatement, message: "Expected '%}' after debug.")
+        return .debug
+    }
+
+    private mutating func parseTransStatement() throws -> Statement {
+        try consume(.closeStatement, message: "Expected '%}' after trans.")
+        let body = try parseNodesUntil([.endtrans])
+        try consume(.openStatement, message: "Expected '{%' for endtrans.")
+        try consume(.endtrans, message: "Expected 'endtrans'.")
+        try consume(.closeStatement, message: "Expected '%}' after endtrans.")
+        return .trans(body: body)
     }
 
     private mutating func parseRawStatement() throws -> Statement {

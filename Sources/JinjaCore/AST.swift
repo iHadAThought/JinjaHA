@@ -213,6 +213,15 @@ public enum Statement: Hashable, Codable, Sendable {
 
     /// Import selected names from a template (`{% from "x" import a, b as c %}`).
     case fromImport(template: Expression, names: [ImportedName], withContext: Bool)
+
+    /// Evaluate an expression without outputting (`{% do expr %}`).
+    case `do`(Expression)
+
+    /// Dump context for debugging (`{% debug %}`).
+    case debug
+
+    /// Translation block (`{% trans %}...{% endtrans %}`). Body is rendered; optional catalog lookup via env.
+    case trans(body: [Node])
 }
 
 /// A named expression binding used by `{% with %}` and similar statements.

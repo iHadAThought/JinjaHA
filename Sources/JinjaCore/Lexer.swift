@@ -18,6 +18,9 @@ public enum Lexer: Sendable {
         "block": .block, "endblock": .endblock,
         "import": .import,
         "from": .from,
+        "do": .do,
+        "debug": .debug,
+        "trans": .trans, "endtrans": .endtrans,
 
         // Python-compatible keywords
         "True": .boolean, "False": .boolean, "None": .null,

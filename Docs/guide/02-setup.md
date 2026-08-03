@@ -4,7 +4,7 @@
 
 ```swift
 dependencies: [
-  .package(url: "https://github.com/iHadAThought/JinjaHA.git", from: "0.1.0")
+  .package(url: "https://github.com/iHadAThought/JinjaHA.git", from: "0.2.0")
 ]
 ```
 
