@@ -1,0 +1,3 @@
+{# Phase 2 depth: pack/version/trans #}
+{{ (-3) | pack('<h') | unpack('<h') }}|{{ version('2024.12') >= '2024.1' }}|{{ as_datetime('bad', default='x') }}
+{% trans user='Ada' %}Hello {{ user }}!{% endtrans %}

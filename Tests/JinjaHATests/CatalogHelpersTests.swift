@@ -125,5 +125,27 @@ final class CatalogHelpersTests: XCTestCase {
         let engine = HATemplateEngine(snapshot: HAStateSnapshot())
         XCTAssertEqual(try engine.render("{{ version('2024.12.1').major }}"), "2024")
         XCTAssertEqual(try engine.render("{{ contains(['a','b'], 'a') }}"), "true")
+        XCTAssertEqual(try engine.render("{{ version('2024.12') >= '2024.1' }}"), "true")
+        XCTAssertEqual(try engine.render("{{ version('2023.12') < '2024.1' }}"), "true")
+    }
+
+    func testPhase2PackVersionTrans() throws {
+        let engine = HATemplateEngine(snapshot: HAStateSnapshot())
+        XCTAssertEqual(try engine.render("{{ (-5) | pack('<h') | unpack('<h') }}"), "-5")
+        XCTAssertEqual(
+            try engine.render("{{ [1, 2] | pack('>HH') | unpack('>HH') | join(',') }}"),
+            "1,2"
+        )
+        XCTAssertEqual(try engine.render("{{ as_datetime('nope', default='fallback') }}"), "fallback")
+
+        let env = HATemplateEngine(
+            snapshot: HAStateSnapshot(translationStrings: [
+                "Hello %(user)s!": "Bonjour %(user)s!"
+            ])
+        )
+        XCTAssertEqual(
+            try env.render("{% trans user='Ada' %}Hello {{ user }}!{% endtrans %}"),
+            "Bonjour Ada!"
+        )
     }
 }

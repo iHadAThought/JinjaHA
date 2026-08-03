@@ -29,4 +29,16 @@ final class StatementDoDebugTransTests: XCTestCase {
             "World"
         )
     }
+
+    func testTransPlaceholders() throws {
+        let env = Environment()
+        env.translationCatalog = ["Hello %(user)s!": "Bonjour %(user)s!"]
+        XCTAssertEqual(
+            try Template("{% trans user='Ada' %}Hello {{ user }}!{% endtrans %}").render(
+                [:],
+                environment: env
+            ),
+            "Bonjour Ada!"
+        )
+    }
 }

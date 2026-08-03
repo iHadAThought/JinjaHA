@@ -220,8 +220,9 @@ public enum Statement: Hashable, Codable, Sendable {
     /// Dump context for debugging (`{% debug %}`).
     case debug
 
-    /// Translation block (`{% trans %}...{% endtrans %}`). Body is rendered; optional catalog lookup via env.
-    case trans(body: [Node])
+    /// Translation block (`{% trans [name=expr, …] %}...{% endtrans %}`).
+    /// Supports gettext-style `%(name)s` catalog entries for placeholder bodies.
+    case trans(assignments: [NamedExpression], body: [Node])
 }
 
 /// A named expression binding used by `{% with %}` and similar statements.

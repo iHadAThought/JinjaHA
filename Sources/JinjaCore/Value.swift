@@ -433,6 +433,16 @@ public enum Value: Sendable {
     ///   - other: The value to compare the current value to
     /// - Throws: `JinjaError.runtime` if the values cannot be compared
     public func compare(to other: Value) throws -> Int {
+        if Self.isHAVersion(self) || Self.isHAVersion(other) {
+            if let left = Self.versionParts(self), let right = Self.versionParts(other) {
+                for i in 0..<max(left.count, right.count) {
+                    let a = i < left.count ? left[i] : 0
+                    let b = i < right.count ? right[i] : 0
+                    if a != b { return a < b ? -1 : 1 }
+                }
+                return 0
+            }
+        }
         switch (self, other) {
         case let (.int(a), .int(b)):
             return a < b ? -1 : a > b ? 1 : 0
@@ -450,6 +460,34 @@ public enum Value: Sendable {
             throw JinjaError.runtime(
                 "Cannot compare values of different types (\(self) and \(other))"
             )
+        }
+    }
+
+    private static func isHAVersion(_ value: Value) -> Bool {
+        if case .object(let dict, _, _) = value,
+           case .boolean(true) = dict[.string("__ha_version__")]
+        {
+            return true
+        }
+        return false
+    }
+
+    private static func versionParts(_ value: Value) -> [Int]? {
+        switch value {
+        case .object(let dict, _, _):
+            let major = dict[.string("major")].flatMap { if case .int(let i) = $0 { return i }; return nil } ?? 0
+            let minor = dict[.string("minor")].flatMap { if case .int(let i) = $0 { return i }; return nil } ?? 0
+            let patch = dict[.string("patch")].flatMap { if case .int(let i) = $0 { return i }; return nil } ?? 0
+            return [major, minor, patch]
+        case .string(let text):
+            let parts = text.split(separator: ".").compactMap { segment -> Int? in
+                if let whole = Int(segment) { return whole }
+                let digits = segment.prefix(while: \.isNumber)
+                return digits.isEmpty ? nil : Int(digits)
+            }
+            return parts.isEmpty ? nil : parts
+        default:
+            return nil
         }
     }
 

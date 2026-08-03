@@ -22,10 +22,10 @@ JinjaHA is a **standalone SPM library** that implements as much of Home Assistan
 | `{% include %}` / `{% extends %}` / `{% block %}` / `super()` | Supported | |
 | `{% import %}` / `{% from ... import %}` | Supported | |
 | Callable objects / custom stringify | Supported | |
-| Datetime / timedelta values | Supported | `strftime`; date-only `isoformat` |
+| Datetime / timedelta values | Supported | `strftime` (incl. Python `%-d` / `%-I` no-pad tokens); date-only `isoformat` |
 | `{% do %}` | Supported | Evaluates expression; no output |
 | `{% debug %}` | Supported | Dumps defined context keys |
-| `{% trans %}` / `{% endtrans %}` | Supported | Renders body; optional `HAStateSnapshot.translationStrings` lookup by msgid |
+| `{% trans %}` / `{% endtrans %}` | Supported | Optional assignments; gettext `%(name)s` catalog keys via `translationCatalog` / snapshot |
 
 ## JinjaHA — helper coverage (catalog-driven)
 
@@ -35,13 +35,13 @@ Source of truth: [HA template functions](https://www.home-assistant.io/template-
 |----------|--------|-------|
 | States | Supported | `states`, `is_state`, `is_state_attr`, `state_attr`, `has_value`, `expand` |
 | Areas / devices / floors / labels | Supported | Core registry helpers |
-| Date & time | Supported | `now`/`utcnow`/`as_*`/`timedelta`/`strptime`/`timestamp_*`/`today_at`/`relative_time`/`time_since`/`time_until` |
-| Encoding / hash | Supported | `base64_*`, `md5`, `sha1`, `sha256`, `sha512`, `urlencode`, `from_hex`, `pack`, `unpack` |
+| Date & time | Supported | `now`/`utcnow`/`as_*` (incl. `as_datetime` default)/`timedelta`/`strptime`/`timestamp_*`/`today_at`/`relative_time`/`time_since`/`time_until`; `strftime` `%-` tokens |
+| Encoding / hash | Supported | `base64_*`, `md5`, `sha1`, `sha256`, `sha512`, `urlencode`, `from_hex`, `pack`/`unpack` (`bBhHiIlLqQfds`, endian, multi-field) |
 | Entities / registry | Supported | `entity_name`, `is_hidden_entity`, `integration_entities`, `config_entry_id`, `config_entry_attr` (needs snapshot meta) |
 | Repairs | Supported | `issues` / `issue` from `HAStateSnapshot.repairIssues` |
 | Translations | Supported | `state_translated` / `state_attr_translated` (+ `{% trans %}`) |
 | Math | Supported | `pi`/`e`/`tau`/`log`/`sin`/`cos`/`tan`/`sqrt`/`acos`/`asin`/`atan`/`atan2`/`clamp`/`remap`/`wrap`/`bitwise_*`/`median`/`statistical_mode`/`average` |
-| Functional | Supported | `iif`, `apply`, `as_function`, `zip`, `version`, `ord`, `contains` (+ JinjaCore `namespace`/`cycler`/`joiner`/`lipsum`/`dict`/`range`) |
+| Functional | Supported | `iif`, `apply`, `as_function`, `zip`, `version` (comparable), `ord`, `contains` (+ JinjaCore `namespace`/`cycler`/`joiner`/`lipsum`/`dict`/`range`) |
 | Type conversion | Supported | HA `bool`/`add`/`multiply` (+ JinjaCore `int`/`float`/`string`/`bool` tests `odd`/`even`/`divisibleby`) |
 | Strings extras | Supported | `ordinal`, `filesizeformat` (JinjaCore), slugify/regex |
 | Collections extras | Supported | set ops, `flatten`, `combine`, `shuffle`, `merge_response` (+ JinjaCore `batch`/`slice`/`map`/…) |

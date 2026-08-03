@@ -181,12 +181,22 @@ public struct Parser: Sendable {
     }
 
     private mutating func parseTransStatement() throws -> Statement {
+        var assignments: [NamedExpression] = []
+        if !check(.closeStatement) {
+            repeat {
+                try consume(.identifier, message: "Expected variable name in trans.")
+                let name = String(previous().value)
+                try consume(.equals, message: "Expected '=' in trans assignment.")
+                let expr = try parseExpression()
+                assignments.append(NamedExpression(name: name, expression: expr))
+            } while match(.comma)
+        }
         try consume(.closeStatement, message: "Expected '%}' after trans.")
         let body = try parseNodesUntil([.endtrans])
         try consume(.openStatement, message: "Expected '{%' for endtrans.")
         try consume(.endtrans, message: "Expected 'endtrans'.")
         try consume(.closeStatement, message: "Expected '%}' after endtrans.")
-        return .trans(body: body)
+        return .trans(assignments: assignments, body: body)
     }
 
     private mutating func parseRawStatement() throws -> Statement {

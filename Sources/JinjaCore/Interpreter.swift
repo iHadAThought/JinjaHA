@@ -739,10 +739,24 @@ public enum Interpreter {
             let keys = env.definedNames.sorted().joined(separator: ", ")
             buffer.append("{# debug: \(keys) #}")
 
-        case let .trans(body):
+        case let .trans(assignments, body):
+            let local = Environment(parent: env)
+            var placeholders: [String: String] = [:]
+            for assignment in assignments {
+                let value = try evaluateExpression(assignment.expression, env: env)
+                local[assignment.name] = value
+                placeholders[assignment.name] = value.description
+            }
+
+            let msgid = try buildTransMessageID(body, env: local)
+            if let template = env.translationCatalog[msgid] ?? local.translationCatalog[msgid] {
+                buffer.append(formatGettext(template, values: placeholders))
+                break
+            }
+
             var inner = ""
-            try interpret(body, env: env, into: &inner)
-            if let translated = env.translationCatalog[inner] {
+            try interpret(body, env: local, into: &inner)
+            if let translated = env.translationCatalog[inner] ?? local.translationCatalog[inner] {
                 buffer.append(translated)
             } else {
                 buffer.append(inner)
@@ -1176,5 +1190,36 @@ public enum Interpreter {
         default:
             throw JinjaError.runtime("Slice requires array or string")
         }
+    }
+
+    /// Build gettext msgid: text nodes pass through; simple `{{ name }}` → `%(name)s`.
+    private static func buildTransMessageID(_ body: [Node], env: Environment) throws -> String {
+        var msgid = ""
+        for node in body {
+            switch node {
+            case .text(let text):
+                msgid += text
+            case .expression(let expression):
+                if case .identifier(let name) = expression {
+                    msgid += "%(\(name))s"
+                } else {
+                    let value = try evaluateExpression(expression, env: env)
+                    msgid += value.description
+                }
+            default:
+                var chunk = ""
+                try interpret([node], env: env, into: &chunk)
+                msgid += chunk
+            }
+        }
+        return msgid
+    }
+
+    private static func formatGettext(_ template: String, values: [String: String]) -> String {
+        var result = template
+        for (name, value) in values {
+            result = result.replacingOccurrences(of: "%(\(name))s", with: value)
+        }
+        return result
     }
 }

@@ -243,12 +243,28 @@ enum HAGlobals {
 
     private static func makeAsDatetime(snapshot: HAStateSnapshot) -> @Sendable ([Value], [String: Value], Environment) throws -> Value {
         { args, kwargs, _ in
-            guard let first = args.first, let date = parseDate(first, snapshot: snapshot) else {
+            let defaultValue: Value? = {
+                if args.count > 1 { return args[1] }
+                return kwargs["default"]
+            }()
+            guard let first = args.first else {
+                if let defaultValue { return defaultValue }
                 return .null
             }
-            // Optional naive/aware: HA accepts timezone kwargs; we keep snapshot TZ unless UTC.
-            let utc = boolArg(args, kwargs, name: "utc", index: 1) ?? false
-            let tz = utc ? TimeZone(secondsFromGMT: 0)! : snapshot.timeZone
+            guard let date = parseDate(first, snapshot: snapshot) else {
+                if let defaultValue { return defaultValue }
+                return .null
+            }
+            // Prefer explicit utc kwarg; otherwise use TZ embedded in datetime values / snapshot.
+            let utc = (kwargs["utc"].map { $0.isTruthy }) ?? false
+            let tz: TimeZone
+            if utc {
+                tz = TimeZone(secondsFromGMT: 0)!
+            } else if let embedded = first.dateTimeTimeZone {
+                tz = embedded
+            } else {
+                tz = snapshot.timeZone
+            }
             return .datetime(date, timeZone: tz)
         }
     }

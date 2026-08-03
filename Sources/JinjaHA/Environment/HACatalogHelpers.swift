@@ -112,13 +112,18 @@ enum HACatalogHelpers {
         }
     }
 
-    /// Minimal Python-struct pack for common formats (`B`, `H`, `I`, `Q`, `f`, `d` + endian).
+    /// Minimal Python-struct pack for common formats (`bBhHiIlLqQfd`, `Ns`, endian, multi-field).
     private static func makePack() -> JinjaFunction {
         { args, kwargs, _ in
             let format = try requireString(args, kwargs, name: "format_string", index: 1)
             guard args.count >= 1 else { return .null }
-            let value = args[0]
-            guard let packed = packValue(value, format: format) else { return .null }
+            let values: [Value]
+            if case .array(let items) = args[0] {
+                values = items
+            } else {
+                values = [args[0]]
+            }
+            guard let packed = packValues(values, format: format) else { return .null }
             return .string(packed.map { String(format: "%02x", $0) }.joined())
         }
     }
@@ -140,12 +145,41 @@ enum HACatalogHelpers {
             } else {
                 data = Data(hexOrText.utf8)
             }
-            return unpackValue(data, format: format) ?? .null
+            return unpackValues(data, format: format) ?? .null
         }
     }
 
-    private static func packValue(_ value: Value, format: String) -> Data? {
-        let (endian, code) = parseStructFormat(format)
+    private static func packValues(_ values: [Value], format: String) -> Data? {
+        let (endian, codes) = parseStructCodes(format)
+        guard !codes.isEmpty else { return nil }
+        var data = Data()
+        var valueIndex = 0
+        for code in codes {
+            if code.code == "x" {
+                data.append(0)
+                continue
+            }
+            guard valueIndex < values.count else { return nil }
+            let value = values[valueIndex]
+            valueIndex += 1
+            guard let chunk = packOne(value, code: code, endian: endian) else { return nil }
+            data.append(chunk)
+        }
+        return data
+    }
+
+    private static func packOne(_ value: Value, code: StructCode, endian: Endian) -> Data? {
+        if code.code == "s" {
+            let text: String
+            switch value {
+            case .string(let s): text = s
+            default: text = value.description
+            }
+            var bytes = Array(text.utf8.prefix(code.count))
+            while bytes.count < code.count { bytes.append(0) }
+            return Data(bytes)
+        }
+
         let number: Double? = {
             switch value {
             case .int(let i): return Double(i)
@@ -156,20 +190,34 @@ enum HACatalogHelpers {
         }()
         guard let number else { return nil }
         var data = Data()
-        switch code {
+        switch code.code {
         case "B":
             data.append(UInt8(clamping: Int(number)))
+        case "b":
+            data.append(UInt8(bitPattern: Int8(clamping: Int(number))))
         case "H":
             var v = UInt16(clamping: Int(number))
-            if endian == .big { v = v.bigEndian } else { v = v.littleEndian }
+            v = endian == .little ? v.littleEndian : v.bigEndian
             withUnsafeBytes(of: v) { data.append(contentsOf: $0) }
-        case "I":
+        case "h":
+            var v = Int16(clamping: Int(number))
+            v = endian == .little ? v.littleEndian : v.bigEndian
+            withUnsafeBytes(of: v) { data.append(contentsOf: $0) }
+        case "I", "L":
             var v = UInt32(clamping: Int(number))
-            if endian == .big { v = v.bigEndian } else { v = v.littleEndian }
+            v = endian == .little ? v.littleEndian : v.bigEndian
+            withUnsafeBytes(of: v) { data.append(contentsOf: $0) }
+        case "i", "l":
+            var v = Int32(clamping: Int(number))
+            v = endian == .little ? v.littleEndian : v.bigEndian
             withUnsafeBytes(of: v) { data.append(contentsOf: $0) }
         case "Q":
             var v = UInt64(clamping: Int(number))
-            if endian == .big { v = v.bigEndian } else { v = v.littleEndian }
+            v = endian == .little ? v.littleEndian : v.bigEndian
+            withUnsafeBytes(of: v) { data.append(contentsOf: $0) }
+        case "q":
+            var v = Int64(clamping: Int(number))
+            v = endian == .little ? v.littleEndian : v.bigEndian
             withUnsafeBytes(of: v) { data.append(contentsOf: $0) }
         case "f":
             var v = Float(number)
@@ -185,47 +233,134 @@ enum HACatalogHelpers {
         return data
     }
 
-    private static func unpackValue(_ data: Data, format: String) -> Value? {
-        let (endian, code) = parseStructFormat(format)
-        switch code {
-        case "B":
-            guard let b = data.first else { return nil }
-            return .int(Int(b))
-        case "H":
-            guard data.count >= 2 else { return nil }
-            var v: UInt16 = 0
-            _ = withUnsafeMutableBytes(of: &v) { data.copyBytes(to: $0, count: 2) }
-            return .int(Int(endian == .big ? UInt16(bigEndian: v) : UInt16(littleEndian: v)))
-        case "I":
-            guard data.count >= 4 else { return nil }
-            var v: UInt32 = 0
-            _ = withUnsafeMutableBytes(of: &v) { data.copyBytes(to: $0, count: 4) }
-            return .int(Int(endian == .big ? UInt32(bigEndian: v) : UInt32(littleEndian: v)))
-        case "Q":
-            guard data.count >= 8 else { return nil }
-            var v: UInt64 = 0
-            _ = withUnsafeMutableBytes(of: &v) { data.copyBytes(to: $0, count: 8) }
-            return .int(Int(endian == .big ? UInt64(bigEndian: v) : UInt64(littleEndian: v)))
-        default:
-            return .string(String(decoding: data, as: UTF8.self))
+    private static func unpackValues(_ data: Data, format: String) -> Value? {
+        let (endian, codes) = parseStructCodes(format)
+        guard !codes.isEmpty else { return nil }
+        var offset = 0
+        var results: [Value] = []
+        for code in codes {
+            if code.code == "x" {
+                offset += 1
+                continue
+            }
+            guard let (value, size) = unpackOne(data, offset: offset, code: code, endian: endian) else {
+                return nil
+            }
+            results.append(value)
+            offset += size
         }
+        return results.count == 1 ? results[0] : .array(results)
+    }
+
+    private static func unpackOne(
+        _ data: Data,
+        offset: Int,
+        code: StructCode,
+        endian: Endian
+    ) -> (Value, Int)? {
+        switch code.code {
+        case "B":
+            guard offset < data.count else { return nil }
+            return (.int(Int(data[offset])), 1)
+        case "b":
+            guard offset < data.count else { return nil }
+            return (.int(Int(Int8(bitPattern: data[offset]))), 1)
+        case "H":
+            guard data.count >= offset + 2 else { return nil }
+            var v: UInt16 = 0
+            _ = withUnsafeMutableBytes(of: &v) { data.copyBytes(to: $0, from: offset..<(offset + 2)) }
+            let value = endian == .little ? UInt16(littleEndian: v) : UInt16(bigEndian: v)
+            return (.int(Int(value)), 2)
+        case "h":
+            guard data.count >= offset + 2 else { return nil }
+            var v: Int16 = 0
+            _ = withUnsafeMutableBytes(of: &v) { data.copyBytes(to: $0, from: offset..<(offset + 2)) }
+            let value = endian == .little ? Int16(littleEndian: v) : Int16(bigEndian: v)
+            return (.int(Int(value)), 2)
+        case "I", "L":
+            guard data.count >= offset + 4 else { return nil }
+            var v: UInt32 = 0
+            _ = withUnsafeMutableBytes(of: &v) { data.copyBytes(to: $0, from: offset..<(offset + 4)) }
+            let value = endian == .little ? UInt32(littleEndian: v) : UInt32(bigEndian: v)
+            return (.int(Int(value)), 4)
+        case "i", "l":
+            guard data.count >= offset + 4 else { return nil }
+            var v: Int32 = 0
+            _ = withUnsafeMutableBytes(of: &v) { data.copyBytes(to: $0, from: offset..<(offset + 4)) }
+            let value = endian == .little ? Int32(littleEndian: v) : Int32(bigEndian: v)
+            return (.int(Int(value)), 4)
+        case "Q":
+            guard data.count >= offset + 8 else { return nil }
+            var v: UInt64 = 0
+            _ = withUnsafeMutableBytes(of: &v) { data.copyBytes(to: $0, from: offset..<(offset + 8)) }
+            let value = endian == .little ? UInt64(littleEndian: v) : UInt64(bigEndian: v)
+            return (.int(Int(value)), 8)
+        case "q":
+            guard data.count >= offset + 8 else { return nil }
+            var v: Int64 = 0
+            _ = withUnsafeMutableBytes(of: &v) { data.copyBytes(to: $0, from: offset..<(offset + 8)) }
+            let value = endian == .little ? Int64(littleEndian: v) : Int64(bigEndian: v)
+            return (.int(Int(value)), 8)
+        case "f":
+            guard data.count >= offset + 4 else { return nil }
+            var bytes = Array(data[offset..<(offset + 4)])
+            if endian == .big { bytes.reverse() }
+            let value = bytes.withUnsafeBytes { $0.load(as: Float.self) }
+            return (.double(Double(value)), 4)
+        case "d":
+            guard data.count >= offset + 8 else { return nil }
+            var bytes = Array(data[offset..<(offset + 8)])
+            if endian == .big { bytes.reverse() }
+            let value = bytes.withUnsafeBytes { $0.load(as: Double.self) }
+            return (.double(value), 8)
+        case "s":
+            guard data.count >= offset + code.count else { return nil }
+            let slice = data[offset..<(offset + code.count)]
+            let text = String(decoding: slice.prefix { $0 != 0 }, as: UTF8.self)
+            return (.string(text), code.count)
+        default:
+            return nil
+        }
+    }
+
+    private struct StructCode {
+        let code: Character
+        let count: Int
     }
 
     private enum Endian { case big, little, native }
 
-    private static func parseStructFormat(_ format: String) -> (Endian, String) {
+    private static func parseStructCodes(_ format: String) -> (Endian, [StructCode]) {
         var endian: Endian = .native
-        var code = format
-        if let first = format.first {
+        var remaining = Substring(format)
+        if let first = remaining.first {
             switch first {
-            case ">": endian = .big; code = String(format.dropFirst())
-            case "<": endian = .little; code = String(format.dropFirst())
-            case "=", "@": endian = .native; code = String(format.dropFirst())
-            case "!": endian = .big; code = String(format.dropFirst())
+            case ">": endian = .big; remaining.removeFirst()
+            case "<": endian = .little; remaining.removeFirst()
+            case "=", "@": endian = .native; remaining.removeFirst()
+            case "!": endian = .big; remaining.removeFirst()
             default: break
             }
         }
-        return (endian, code)
+        var codes: [StructCode] = []
+        while !remaining.isEmpty {
+            var count = 0
+            while let ch = remaining.first, ch.isNumber {
+                count = count * 10 + Int(String(ch))!
+                remaining.removeFirst()
+            }
+            guard let code = remaining.first else { break }
+            remaining.removeFirst()
+            let repeatCount = max(count, 1)
+            if code == "s" {
+                codes.append(StructCode(code: code, count: max(count, 1)))
+            } else {
+                for _ in 0..<repeatCount {
+                    codes.append(StructCode(code: code, count: 1))
+                }
+            }
+        }
+        return (endian, codes)
     }
 
     // MARK: - Entities
@@ -688,8 +823,13 @@ enum HACatalogHelpers {
     private static func makeVersion() -> JinjaFunction {
         { args, kwargs, _ in
             let text = try requireString(args, kwargs, name: "value", index: 0)
-            let parts = text.split(separator: ".").compactMap { Int($0) }
+            let parts = text.split(separator: ".").compactMap { segment -> Int? in
+                if let whole = Int(segment) { return whole }
+                let digits = segment.prefix(while: \.isNumber)
+                return digits.isEmpty ? nil : Int(digits)
+            }
             var dict = OrderedDictionary<ObjectKey, Value>()
+            dict[.string("__ha_version__")] = .boolean(true)
             dict[.string("major")] = .int(parts.count > 0 ? parts[0] : 0)
             dict[.string("minor")] = .int(parts.count > 1 ? parts[1] : 0)
             dict[.string("patch")] = .int(parts.count > 2 ? parts[2] : 0)
