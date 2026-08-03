@@ -13,4 +13,4 @@
 
 All planned build phases complete. Ongoing work: grow Compatibility goldens as upstream releases land.
 
-See also `Docs/FEATURES.md` and `Docs/COMPAT.md` in the repo.
+See also [`Docs/FEATURES.md`](../FEATURES.md) and [`Docs/COMPAT.md`](../COMPAT.md).

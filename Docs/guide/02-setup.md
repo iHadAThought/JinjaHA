@@ -4,7 +4,7 @@
 
 ```swift
 dependencies: [
-  .package(url: "https://git.ghostnetwork.app/Brendan/JinjaHA.git", from: "0.1.0")
+  .package(url: "https://github.com/iHadAThought/JinjaHA.git", from: "0.1.0")
 ]
 ```
 
@@ -15,12 +15,9 @@ dependencies: [
 ])
 ```
 
-Private Forgejo packages may need a netrc / SPM credential helper.
-
 ## Local develop
 
 ```bash
-cd /Users/brendan/Projects/JinjaHA
 swift test
 swift run MinimalRender
 swift run CompareDemo

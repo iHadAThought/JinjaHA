@@ -18,9 +18,9 @@ An earlier spike depended on huggingface/swift-jinja. That capped statements (`{
 
 ## Dialect target
 
-- Pallets Jinja **3.1.x** semantics (see `Docs/COMPAT.md`)
+- Pallets Jinja **3.1.x** semantics (see [`Docs/COMPAT.md`](../COMPAT.md))
 - HA helpers tracked separately (`JinjaHAInfo.homeAssistantHelpersRevision`)
 
 ## Repo
 
-- Forgejo: https://git.ghostnetwork.app/Brendan/JinjaHA
+- GitHub: https://github.com/iHadAThought/JinjaHA
