@@ -32,6 +32,13 @@ JinjaCore supports `{% raw %}`, `{% with %}`, `{% include %}` (`ignore missing`,
 
 Registered via Environment registries: `iif`, `is_number`, `is_defined`, `slugify`, `average`, regex helpers, `floor_entities`, and `labels(lookup?)` overload.
 
+## Test corpus (Phase 5)
+
+- `Tests/JinjaCoreTests` — filters, control flow, sandbox, Compatibility/jinja-3.1
+- `Tests/JinjaHATests` — goldens under Fixtures/templates + Compatibility/home-assistant
+- `Tests/JinjaHASwiftUITests` — last-good, cancel, re-render
+
+
 ## Environment merge
 
 Root environments seed built-ins **first**, then caller overlays. Custom `range` and HA globals survive `Interpreter.interpret` via `Environment(copying:)`.

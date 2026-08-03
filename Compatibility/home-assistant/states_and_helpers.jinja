@@ -1,0 +1,1 @@
+{{ states('sensor.outdoor_temperature') }}|{{ states.light.kitchen }}|{{ 'light.kitchen' | states }}|{{ iif(true, 'Y', 'N') }}|{{ slugify('Hello World') }}

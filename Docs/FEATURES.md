@@ -43,3 +43,11 @@ Legend: **Supported** · **Partial** · **Unsupported** · **API-fallback** (HA 
 | Feature | Status |
 |---------|--------|
 | `HATemplateText` / `HATemplateMarkdown` last-good-render | Supported |
+
+## Test corpus
+
+| Area | Location |
+|------|----------|
+| Dialect goldens | `Compatibility/jinja-3.1/` |
+| HA helper goldens | `Compatibility/home-assistant/` + `Fixtures/templates/` |
+| Unit suites | `Tests/JinjaCoreTests`, `JinjaHATests`, `JinjaHASwiftUITests` |

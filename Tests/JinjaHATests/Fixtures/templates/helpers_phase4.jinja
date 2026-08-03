@@ -1,0 +1,1 @@
+{{ states('sensor.outdoor_temperature', with_unit=true) }}|{{ iif(is_state('light.kitchen','on'), 'open', 'closed') }}|{{ slugify('Kitchen Light', '-') }}|{{ [1,2,3]|average }}
