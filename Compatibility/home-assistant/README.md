@@ -6,7 +6,7 @@ Run via `CompatibilityHATests` in JinjaHATests (only pairs with `.expected.txt`)
 
 ## Work Audit board templates
 
-`work_audit_*.jinja` are markdown card bodies mirrored from the paycheck-hours-audit Lovelace dashboard (ProxMox export: `paycheck_hours_audit.yaml`). They are **template-only** goldens: no frozen `.expected.txt` (output depends on entity state).
+`work_audit_*.jinja` are markdown card bodies mirrored from a paycheck-hours-audit Lovelace dashboard (`paycheck_hours_audit.yaml`). They are **template-only** goldens: no frozen `.expected.txt` (output depends on entity state).
 
 Assert local ↔ HA API parity with:
 
