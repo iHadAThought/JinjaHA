@@ -20,6 +20,9 @@ Legend: **Supported** · **Partial** · **Unsupported** · **API-fallback** (HA 
 | `{% import %}` / `{% from ... import %}` | Supported | Phase 2 — macros into namespace or aliases |
 | Callable objects | Supported | Phase 3 — `Value.object(..., call:)` |
 | Custom object stringify | Supported | Phase 3 — `stringRepresentation` |
+| `{% do %}` | Unsupported | Backlog — same statement hooks as Phase 2 |
+| `{% debug %}` | Unsupported | Backlog |
+| Line statements / `{% trans %}` i18n | Unsupported | Backlog |
 
 ## JinjaHA
 
@@ -34,15 +37,25 @@ Legend: **Supported** · **Partial** · **Unsupported** · **API-fallback** (HA 
 | `floor_entities` | Supported | Phase 4 |
 | `labels()` overload | Supported | All labels, or labels for entity/device/area |
 | Areas / devices / floors / labels | Supported | Core registry helpers present |
-| Datetime helpers | Partial | ISO/numeric shims |
+| Datetime helpers | Partial | ISO/numeric shims (full datetime value type = later epic) |
 | `POST /api/template` | Supported | |
 | Inheritance / raw / with / include / import | Supported | Phase 2 in JinjaCore (loader still required for include/extends) |
+| Geo / translations / encoding-hash / repairs / math extras | Unsupported | Backlog via registries + FEATURES |
 
 ## JinjaHASwiftUI
 
-| Feature | Status |
-|---------|--------|
-| `HATemplateText` / `HATemplateMarkdown` last-good-render | Supported |
+| Feature | Status | Notes |
+|---------|--------|-------|
+| `HATemplateText` / `HATemplateMarkdown` last-good-render | Supported | |
+| GFM pipe tables in markdown | Supported | `MarkdownDocumentView` (Foundation markdown collapses tables) |
+
+## Version identity
+
+| Constant | Location |
+|----------|----------|
+| `JinjaCoreInfo.dialectVersion` | `Sources/JinjaCore/DialectVersion.swift` |
+| `JinjaCoreInfo.implementationRevision` | same |
+| `JinjaHAInfo.homeAssistantHelpersRevision` | `Sources/JinjaHA/JinjaHAInfo.swift` |
 
 ## Test corpus
 
