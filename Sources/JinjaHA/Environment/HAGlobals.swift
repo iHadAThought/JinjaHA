@@ -6,58 +6,51 @@ enum HAGlobals {
         let statesFn = makeStatesFunction(snapshot: snapshot)
         env["states"] = makeStatesObject(snapshot: snapshot, call: statesFn)
         env.registerFilter("states", statesFn)
-        env["is_state"] = .function(makeIsState(snapshot: snapshot))
-        env["is_state_attr"] = .function(makeIsStateAttr(snapshot: snapshot))
-        env["state_attr"] = .function(makeStateAttr(snapshot: snapshot))
-        env["has_value"] = .function(makeHasValue(snapshot: snapshot))
-        env["expand"] = .function(makeExpand(snapshot: snapshot))
+        registerBoth("is_state", makeIsState(snapshot: snapshot), into: env)
+        registerBoth("is_state_attr", makeIsStateAttr(snapshot: snapshot), into: env)
+        registerBoth("state_attr", makeStateAttr(snapshot: snapshot), into: env)
+        registerBoth("has_value", makeHasValue(snapshot: snapshot), into: env)
+        registerBoth("expand", makeExpand(snapshot: snapshot), into: env)
 
         env["now"] = .function(makeNow(snapshot: snapshot, utc: false))
         env["utcnow"] = .function(makeNow(snapshot: snapshot, utc: true))
-        let asTimestamp = makeAsTimestamp(snapshot: snapshot)
-        let asDatetime = makeAsDatetime(snapshot: snapshot)
-        let asLocal = makeAsLocal(snapshot: snapshot)
-        env["as_timestamp"] = .function(asTimestamp)
-        env["as_datetime"] = .function(asDatetime)
-        env["as_local"] = .function(asLocal)
-        // Board templates commonly use filter form: `value | as_datetime`
-        env.registerFilter("as_timestamp", asTimestamp)
-        env.registerFilter("as_datetime", asDatetime)
-        env.registerFilter("as_local", asLocal)
-        env["as_timedelta"] = .function(makeAsTimedelta())
-        env["timedelta"] = .function(makeTimedelta())
-        env["time_since"] = .function(makeTimeSince(snapshot: snapshot, until: false))
-        env["time_until"] = .function(makeTimeSince(snapshot: snapshot, until: true))
-        env["relative_time"] = .function(makeRelativeTime(snapshot: snapshot))
-        env["today_at"] = .function(makeTodayAt(snapshot: snapshot))
-        env["timestamp_custom"] = .function(makeTimestampCustom(snapshot: snapshot))
-        env["timestamp_local"] = .function(makeTimestampLocal(snapshot: snapshot, utc: false))
-        env["timestamp_utc"] = .function(makeTimestampLocal(snapshot: snapshot, utc: true))
-        env["strptime"] = .function(makeStrptime())
+        registerBoth("as_timestamp", makeAsTimestamp(snapshot: snapshot), into: env)
+        registerBoth("as_datetime", makeAsDatetime(snapshot: snapshot), into: env)
+        registerBoth("as_local", makeAsLocal(snapshot: snapshot), into: env)
+        registerBoth("as_timedelta", makeAsTimedelta(), into: env)
+        registerBoth("timedelta", makeTimedelta(), into: env)
+        registerBoth("time_since", makeTimeSince(snapshot: snapshot, until: false), into: env)
+        registerBoth("time_until", makeTimeSince(snapshot: snapshot, until: true), into: env)
+        registerBoth("relative_time", makeRelativeTime(snapshot: snapshot), into: env)
+        registerBoth("today_at", makeTodayAt(snapshot: snapshot), into: env)
+        registerBoth("timestamp_custom", makeTimestampCustom(snapshot: snapshot), into: env)
+        registerBoth("timestamp_local", makeTimestampLocal(snapshot: snapshot, utc: false), into: env)
+        registerBoth("timestamp_utc", makeTimestampLocal(snapshot: snapshot, utc: true), into: env)
+        registerBoth("strptime", makeStrptime(), into: env)
 
-        env["areas"] = .function(makeAreas(snapshot: snapshot))
-        env["area_id"] = .function(makeAreaID(snapshot: snapshot))
-        env["area_name"] = .function(makeAreaName(snapshot: snapshot))
-        env["area_entities"] = .function(makeAreaEntities(snapshot: snapshot))
-        env["area_devices"] = .function(makeAreaDevices(snapshot: snapshot))
+        registerBoth("areas", makeAreas(snapshot: snapshot), into: env)
+        registerBoth("area_id", makeAreaID(snapshot: snapshot), into: env)
+        registerBoth("area_name", makeAreaName(snapshot: snapshot), into: env)
+        registerBoth("area_entities", makeAreaEntities(snapshot: snapshot), into: env)
+        registerBoth("area_devices", makeAreaDevices(snapshot: snapshot), into: env)
 
-        env["device_id"] = .function(makeDeviceID(snapshot: snapshot))
-        env["device_name"] = .function(makeDeviceName(snapshot: snapshot))
-        env["device_entities"] = .function(makeDeviceEntities(snapshot: snapshot))
-        env["device_attr"] = .function(makeDeviceAttr(snapshot: snapshot))
-        env["is_device_attr"] = .function(makeIsDeviceAttr(snapshot: snapshot))
+        registerBoth("device_id", makeDeviceID(snapshot: snapshot), into: env)
+        registerBoth("device_name", makeDeviceName(snapshot: snapshot), into: env)
+        registerBoth("device_entities", makeDeviceEntities(snapshot: snapshot), into: env)
+        registerBoth("device_attr", makeDeviceAttr(snapshot: snapshot), into: env)
+        registerBoth("is_device_attr", makeIsDeviceAttr(snapshot: snapshot), into: env)
 
-        env["floors"] = .function(makeFloors(snapshot: snapshot))
-        env["floor_id"] = .function(makeFloorID(snapshot: snapshot))
-        env["floor_name"] = .function(makeFloorName(snapshot: snapshot))
-        env["floor_areas"] = .function(makeFloorAreas(snapshot: snapshot))
+        registerBoth("floors", makeFloors(snapshot: snapshot), into: env)
+        registerBoth("floor_id", makeFloorID(snapshot: snapshot), into: env)
+        registerBoth("floor_name", makeFloorName(snapshot: snapshot), into: env)
+        registerBoth("floor_areas", makeFloorAreas(snapshot: snapshot), into: env)
 
-        env["labels"] = .function(makeLabels(snapshot: snapshot))
-        env["label_id"] = .function(makeLabelID(snapshot: snapshot))
-        env["label_name"] = .function(makeLabelName(snapshot: snapshot))
-        env["label_entities"] = .function(makeLabelEntities(snapshot: snapshot))
-        env["label_devices"] = .function(makeLabelDevices(snapshot: snapshot))
-        env["label_areas"] = .function(makeLabelAreas(snapshot: snapshot))
+        registerBoth("labels", makeLabels(snapshot: snapshot), into: env)
+        registerBoth("label_id", makeLabelID(snapshot: snapshot), into: env)
+        registerBoth("label_name", makeLabelName(snapshot: snapshot), into: env)
+        registerBoth("label_entities", makeLabelEntities(snapshot: snapshot), into: env)
+        registerBoth("label_devices", makeLabelDevices(snapshot: snapshot), into: env)
+        registerBoth("label_areas", makeLabelAreas(snapshot: snapshot), into: env)
 
         // Safer range with hard cap — overrides built-in via env merge (Phase 1).
         env.registerGlobal("range", .function(makeSafeRange(limits: limits)))
@@ -72,6 +65,15 @@ enum HAGlobals {
 
         // is_state as a test for select("is_state", "on") over entity IDs.
         env.registerTest("is_state", makeIsState(snapshot: snapshot))
+    }
+
+    private static func registerBoth(
+        _ name: String,
+        _ function: @escaping JinjaFunction,
+        into env: Environment
+    ) {
+        env[name] = .function(function)
+        env.registerFilter(name, function)
     }
 
     // MARK: - States

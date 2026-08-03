@@ -40,8 +40,10 @@ Source of truth: [HA template functions](https://www.home-assistant.io/template-
 | Entities / registry | Supported | `entity_name`, `is_hidden_entity`, `integration_entities`, `config_entry_id`, `config_entry_attr` (needs snapshot meta) |
 | Repairs | Supported | `issues` / `issue` from `HAStateSnapshot.repairIssues` |
 | Translations | Supported | `state_translated` / `state_attr_translated` (+ `{% trans %}`) |
-| Math | Supported | `pi`/`e`/`log`/`sin`/`cos`/`tan`/`sqrt`/`acos`/`asin`/`atan`/`atan2`/`clamp`/`bitwise_*`/`median`/`average` |
-| Functional | Supported | `iif`, `apply`, `zip`, `version`, `ord`, `contains` (+ JinjaCore `namespace`/`cycler`/`joiner`/`lipsum`/`dict`/`range`) |
+| Math | Supported | `pi`/`e`/`tau`/`log`/`sin`/`cos`/`tan`/`sqrt`/`acos`/`asin`/`atan`/`atan2`/`clamp`/`remap`/`wrap`/`bitwise_*`/`median`/`statistical_mode`/`average` |
+| Functional | Supported | `iif`, `apply`, `as_function`, `zip`, `version`, `ord`, `contains` (+ JinjaCore `namespace`/`cycler`/`joiner`/`lipsum`/`dict`/`range`) |
+| Type conversion | Supported | HA `bool`/`add`/`multiply` (+ JinjaCore `int`/`float`/`string`/`bool` tests `odd`/`even`/`divisibleby`) |
+| Strings extras | Supported | `ordinal`, `filesizeformat` (JinjaCore), slugify/regex |
 | Collections extras | Supported | set ops, `flatten`, `combine`, `shuffle`, `merge_response` (+ JinjaCore `batch`/`slice`/`map`/…) |
 | Geo | Supported | `distance` / `closest` (needs home lat/lon) |
 | Regex / strings / JSON | Supported | Phase 4 helpers + `to_json`/`from_json` |

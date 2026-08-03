@@ -1,2 +1,4 @@
-{# Catalog completeness smoke — encoding / math / collections #}
-{{ clamp(5, 0, 10) }}|{{ bitwise_and(7, 3) }}|{{ union(['a'], ['a','b']) | sort | join }}|{{ flatten([[1],2]) | join }}
+{# Catalog completeness smoke — encoding / math / collections / functional / type #}
+{{ clamp(5, 0, 10) }}|{{ bitwise_and(7, 3) }}|{{ union(['a'], ['a','b']) | sort | join }}|{{ flatten([[1],2]) | join }}|{{ statistical_mode([1, 2, 2, 3]) }}|{{ wrap(12, 0, 10) }}|{{ 'yes' | bool }}|{{ 1 | ordinal }}
+{% macro macro_double(value, returns) %}{{ returns(value * 2) }}{% endmacro %}
+{{ as_function(macro_double)(5) }}

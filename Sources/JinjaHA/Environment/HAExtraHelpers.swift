@@ -7,6 +7,7 @@ enum HAExtraHelpers {
     static func register(into env: Environment, snapshot: HAStateSnapshot) {
         env["pi"] = .double(Double.pi)
         env["e"] = .double(M_E)
+        env["tau"] = .double(2 * Double.pi)
         registerBoth("log", makeLog(), into: env)
         registerBoth("sin", makeNamedMath("sin"), into: env)
         registerBoth("cos", makeNamedMath("cos"), into: env)

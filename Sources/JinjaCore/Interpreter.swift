@@ -888,7 +888,7 @@ public enum Interpreter {
         )
     }
 
-    static func callMacro(
+    public static func callMacro(
         macro: Macro,
         arguments: [Value],
         keywordArguments: [String: Value],

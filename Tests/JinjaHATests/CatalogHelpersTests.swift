@@ -77,6 +77,50 @@ final class CatalogHelpersTests: XCTestCase {
         XCTAssertEqual(unpacked, "259")
     }
 
+    func testAsFunctionAndStatisticalMode() throws {
+        let engine = HATemplateEngine(snapshot: HAStateSnapshot())
+        let doubled = try engine.render(
+            """
+            {% macro macro_double(value, returns) %}{{ returns(value * 2) }}{% endmacro %}
+            {{ as_function(macro_double)(5) }}
+            """
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
+        XCTAssertEqual(doubled, "10")
+
+        let mapped = try engine.render(
+            """
+            {% macro macro_double(value, returns) %}{{ returns(value * 2) }}{% endmacro %}
+            {% set double = as_function(macro_double) %}
+            {{ [1, 2, 3] | map('apply', double) | list | join(',') }}
+            """
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
+        XCTAssertEqual(mapped, "2,4,6")
+
+        XCTAssertEqual(try engine.render("{{ statistical_mode([1, 2, 2, 3]) }}"), "2")
+    }
+
+    func testPhase1CatalogLeftovers() throws {
+        let engine = HATemplateEngine(snapshot: HAStateSnapshot())
+        XCTAssertTrue(try engine.render("{{ tau }}").hasPrefix("6.28"))
+        XCTAssertEqual(try engine.render("{{ wrap(12, 0, 10) }}"), "2.0")
+        XCTAssertEqual(try engine.render("{{ remap(50, 0, 100, 0, 10) }}"), "5.0")
+        XCTAssertEqual(try engine.render("{{ remap(120, 0, 100, 0, 10, edges='clamp') }}"), "10.0")
+        XCTAssertEqual(try engine.render("{{ bool('yes') }}"), "true")
+        XCTAssertEqual(try engine.render("{{ 'off' | bool }}"), "false")
+        XCTAssertEqual(try engine.render("{{ bool('maybe', default=false) }}"), "false")
+        XCTAssertEqual(try engine.render("{{ '21.5' | add(2.5) }}"), "24.0")
+        XCTAssertEqual(try engine.render("{{ 'bad' | add(1, default=0) }}"), "0")
+        XCTAssertEqual(try engine.render("{{ '4' | multiply(2.5) }}"), "10.0")
+        XCTAssertEqual(try engine.render("{{ 1 | ordinal }}"), "1st")
+        XCTAssertEqual(try engine.render("{{ 11 | ordinal }}, {{ 22 | ordinal }}"), "11th, 22nd")
+        XCTAssertEqual(try engine.render("{{ 4 is even }}"), "true")
+        XCTAssertEqual(try engine.render("{{ 5 is odd }}"), "true")
+        XCTAssertEqual(try engine.render("{{ 9 is divisibleby(3) }}"), "true")
+        XCTAssertEqual(try engine.render("{{ 1536 | filesizeformat }}"), "1.5 kB")
+        XCTAssertEqual(try engine.render("{{ 'on' | bool | iif('yes', 'no') }}"), "yes")
+        XCTAssertEqual(try engine.render("{{ state_attr is defined }}"), "true")
+    }
+
     func testVersionAndContains() throws {
         let engine = HATemplateEngine(snapshot: HAStateSnapshot())
         XCTAssertEqual(try engine.render("{{ version('2024.12.1').major }}"), "2024")

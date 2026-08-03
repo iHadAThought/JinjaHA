@@ -32,13 +32,23 @@ enum HACatalogHelpers {
         registerBoth("atan", makeNamedUnaryMath("atan"), into: env)
         registerBoth("atan2", makeAtan2(), into: env)
         registerBoth("clamp", makeClamp(), into: env)
+        registerBoth("remap", makeRemap(), into: env)
+        registerBoth("wrap", makeWrap(), into: env)
         registerBoth("bitwise_and", makeBitwise("and"), into: env)
         registerBoth("bitwise_or", makeBitwise("or"), into: env)
         registerBoth("bitwise_xor", makeBitwise("xor"), into: env)
         registerBoth("median", makeMedian(), into: env)
+        registerBoth("statistical_mode", makeStatisticalMode(), into: env)
+
+        // Type conversion / strings (HA-flavored)
+        registerBoth("bool", makeBool(), into: env)
+        registerBoth("add", makeAdd(), into: env)
+        registerBoth("multiply", makeMultiply(), into: env)
+        registerBoth("ordinal", makeOrdinal(), into: env)
 
         // Functional
         registerBoth("apply", makeApply(), into: env)
+        registerBoth("as_function", makeAsFunction(), into: env)
         registerBoth("zip", makeZip(), into: env)
         registerBoth("version", makeVersion(), into: env)
         registerBoth("ord", makeOrd(), into: env)
@@ -391,6 +401,149 @@ enum HACatalogHelpers {
         }
     }
 
+    /// HA `wrap(value, min_value, max_value)` — half-open range `[min, max)`.
+    private static func makeWrap() -> JinjaFunction {
+        { args, kwargs, _ in
+            guard let value = coerceDouble(args, kwargs, name: "value", index: 0),
+                  let minV = coerceDouble(args, kwargs, name: "min_value", index: 1)
+                    ?? coerceDouble(args, kwargs, name: "min", index: 1),
+                  let maxV = coerceDouble(args, kwargs, name: "max_value", index: 2)
+                    ?? coerceDouble(args, kwargs, name: "max", index: 2)
+            else { return .null }
+            let span = maxV - minV
+            guard span > 0 else { return .null }
+            var offset = (value - minV).truncatingRemainder(dividingBy: span)
+            if offset < 0 { offset += span }
+            return .double(offset + minV)
+        }
+    }
+
+    /// HA `remap(value, in_min, in_max, out_min, out_max, steps=0, edges='none')`.
+    private static func makeRemap() -> JinjaFunction {
+        { args, kwargs, _ in
+            guard var value = coerceDouble(args, kwargs, name: "value", index: 0),
+                  let inMin = coerceDouble(args, kwargs, name: "in_min", index: 1),
+                  let inMax = coerceDouble(args, kwargs, name: "in_max", index: 2),
+                  let outMin = coerceDouble(args, kwargs, name: "out_min", index: 3),
+                  let outMax = coerceDouble(args, kwargs, name: "out_max", index: 4)
+            else { return .null }
+
+            let inSpan = inMax - inMin
+            guard inSpan != 0 else { return .null }
+
+            let edges = (stringArg(args, kwargs, name: "edges", index: 6) ?? "none").lowercased()
+            switch edges {
+            case "clamp":
+                value = min(max(value, min(inMin, inMax)), max(inMin, inMax))
+            case "wrap":
+                var offset = (value - inMin).truncatingRemainder(dividingBy: inSpan)
+                if offset < 0 { offset += abs(inSpan) }
+                value = offset + inMin
+            case "mirror":
+                let lo = min(inMin, inMax)
+                let hi = max(inMin, inMax)
+                let span = hi - lo
+                if span > 0 {
+                    var offset = (value - lo).truncatingRemainder(dividingBy: 2 * span)
+                    if offset < 0 { offset += 2 * span }
+                    value = offset <= span ? lo + offset : hi - (offset - span)
+                }
+            default:
+                break
+            }
+
+            var mapped = outMin + ((value - inMin) / inSpan) * (outMax - outMin)
+            let steps = Int(coerceDouble(args, kwargs, name: "steps", index: 5) ?? 0)
+            if steps > 0 {
+                let outSpan = outMax - outMin
+                let stepSize = outSpan / Double(steps)
+                let index = ((mapped - outMin) / stepSize).rounded()
+                mapped = outMin + index * stepSize
+            }
+            return .double(mapped)
+        }
+    }
+
+    /// HA `bool(value, default=…)`.
+    private static func makeBool() -> JinjaFunction {
+        { args, kwargs, _ in
+            let value = try requireValue(args, kwargs, name: "value", index: 0)
+            let defaultValue = optionalValue(args, kwargs, name: "default", index: 1)
+            if let parsed = parseHABool(value) {
+                return .boolean(parsed)
+            }
+            if let defaultValue { return defaultValue }
+            throw HATemplateError.jinja("Value cannot be converted to bool")
+        }
+    }
+
+    /// HA `add(value, amount, default=…)`.
+    private static func makeAdd() -> JinjaFunction {
+        { args, kwargs, _ in
+            let value = try requireValue(args, kwargs, name: "value", index: 0)
+            guard let amount = coerceDouble(args, kwargs, name: "amount", index: 1) else {
+                throw HATemplateError.jinja("add() requires a numeric amount")
+            }
+            let defaultValue = optionalValue(args, kwargs, name: "default", index: 2)
+            guard let number = coerceDoubleValue(value) else {
+                if let defaultValue { return defaultValue }
+                throw HATemplateError.jinja("Value cannot be converted for add()")
+            }
+            return .double(number + amount)
+        }
+    }
+
+    /// HA `multiply(value, amount, default=…)`.
+    private static func makeMultiply() -> JinjaFunction {
+        { args, kwargs, _ in
+            let value = try requireValue(args, kwargs, name: "value", index: 0)
+            guard let amount = coerceDouble(args, kwargs, name: "amount", index: 1) else {
+                throw HATemplateError.jinja("multiply() requires a numeric amount")
+            }
+            let defaultValue = optionalValue(args, kwargs, name: "default", index: 2)
+            guard let number = coerceDoubleValue(value) else {
+                if let defaultValue { return defaultValue }
+                throw HATemplateError.jinja("Value cannot be converted for multiply()")
+            }
+            return .double(number * amount)
+        }
+    }
+
+    /// HA `ordinal(value)` → `1st`, `2nd`, `3rd`, `11th`, …
+    private static func makeOrdinal() -> JinjaFunction {
+        { args, kwargs, _ in
+            let value = try requireValue(args, kwargs, name: "value", index: 0)
+            let number: Int
+            switch value {
+            case .int(let i):
+                number = i
+            case .double(let d):
+                number = Int(d)
+            case .string(let s):
+                guard let parsed = Int(s.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+                    return .string(s)
+                }
+                number = parsed
+            default:
+                return .string(value.description)
+            }
+            let absN = abs(number)
+            let mod100 = absN % 100
+            let suffix: String
+            if (11...13).contains(mod100) {
+                suffix = "th"
+            } else {
+                switch absN % 10 {
+                case 1: suffix = "st"
+                case 2: suffix = "nd"
+                case 3: suffix = "rd"
+                default: suffix = "th"
+                }
+            }
+            return .string("\(number)\(suffix)")
+        }
+    }
+
     private static func makeBitwise(_ name: String) -> JinjaFunction {
         { args, kwargs, _ in
             guard let a = intArg(args, kwargs, index: 0),
@@ -423,22 +576,91 @@ enum HACatalogHelpers {
         }
     }
 
+    private static func makeStatisticalMode() -> JinjaFunction {
+        { args, _, _ in
+            let items: [Value]
+            if let first = args.first, case .array(let list) = first {
+                items = list
+            } else {
+                items = args
+            }
+            guard !items.isEmpty else { return .null }
+            var counts: [String: (Value, Int)] = [:]
+            for item in items {
+                let key = item.description
+                let prior = counts[key]?.1 ?? 0
+                counts[key] = (item, prior + 1)
+            }
+            let best = counts.values.max(by: { $0.1 < $1.1 })
+            return best?.0 ?? .null
+        }
+    }
+
     // MARK: - Functional
+
+    /// HA `as_function(macro)` — macros that accept a `returns` callback become callables.
+    private static func makeAsFunction() -> JinjaFunction {
+        { args, _, env in
+            guard let first = args.first, case .macro(let macro) = first else {
+                return .null
+            }
+
+            let wrapped: JinjaFunction = { callArgs, callKwargs, callEnv in
+                final class ReturnBox: @unchecked Sendable {
+                    var value: Value = .null
+                    var didReturn = false
+                }
+                let box = ReturnBox()
+                let returnsFn: JinjaFunction = { returnArgs, _, _ in
+                    if let value = returnArgs.first {
+                        box.value = value
+                        box.didReturn = true
+                    }
+                    return .string("")
+                }
+
+                var kwargs = callKwargs
+                var positional = callArgs
+                if macro.parameters.contains("returns") {
+                    kwargs["returns"] = .function(returnsFn)
+                } else {
+                    positional.append(.function(returnsFn))
+                }
+
+                _ = try Interpreter.callMacro(
+                    macro: macro,
+                    arguments: positional,
+                    keywordArguments: kwargs,
+                    env: callEnv
+                )
+                return box.didReturn ? box.value : .null
+            }
+
+            return .function(wrapped)
+        }
+    }
 
     private static func makeApply() -> JinjaFunction {
         { args, kwargs, env in
             guard args.count >= 2 else { return .null }
             let value = args[0]
             let fn = args[1]
+            let rest = Array(args.dropFirst(2))
             switch fn {
             case .function(let call):
-                return try call([value] + Array(args.dropFirst(2)), kwargs, env)
+                return try call([value] + rest, kwargs, env)
+            case .macro(let macro):
+                // Convenience: apply(value, macro) via as_function semantics.
+                guard case .function(let wrapped) = try makeAsFunction()([.macro(macro)], [:], env) else {
+                    return .null
+                }
+                return try wrapped([value] + rest, kwargs, env)
             case .string(let name):
                 if let filter = env.filters[name] {
-                    return try filter([value] + Array(args.dropFirst(2)), kwargs, env)
+                    return try filter([value] + rest, kwargs, env)
                 }
                 if case .function(let call) = env[name] {
-                    return try call([value] + Array(args.dropFirst(2)), kwargs, env)
+                    return try call([value] + rest, kwargs, env)
                 }
                 return .null
             default:
@@ -598,6 +820,64 @@ enum HACatalogHelpers {
     }
 
     // MARK: - Helpers
+
+    private static func optionalValue(
+        _ args: [Value],
+        _ kwargs: [String: Value],
+        name: String,
+        index: Int
+    ) -> Value? {
+        if index < args.count { return args[index] }
+        return kwargs[name]
+    }
+
+    private static func coerceDouble(
+        _ args: [Value],
+        _ kwargs: [String: Value],
+        name: String,
+        index: Int
+    ) -> Double? {
+        if index < args.count { return coerceDoubleValue(args[index]) }
+        if let value = kwargs[name] { return coerceDoubleValue(value) }
+        return nil
+    }
+
+    private static func coerceDoubleValue(_ value: Value) -> Double? {
+        switch value {
+        case .int(let i): return Double(i)
+        case .double(let d): return d
+        case .string(let s):
+            return Double(s.trimmingCharacters(in: .whitespacesAndNewlines))
+        default:
+            return nil
+        }
+    }
+
+    private static func parseHABool(_ value: Value) -> Bool? {
+        switch value {
+        case .boolean(let b):
+            return b
+        case .int(let i):
+            if i == 1 { return true }
+            if i == 0 { return false }
+            return nil
+        case .double(let d):
+            if d == 1 { return true }
+            if d == 0 { return false }
+            return nil
+        case .string(let s):
+            switch s.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+            case "true", "yes", "on", "enable", "1":
+                return true
+            case "false", "no", "off", "disable", "0":
+                return false
+            default:
+                return nil
+            }
+        default:
+            return nil
+        }
+    }
 
     private static func intArg(_ args: [Value], _ kwargs: [String: Value], index: Int) -> Int? {
         if args.count > index {

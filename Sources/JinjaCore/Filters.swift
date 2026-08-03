@@ -438,9 +438,10 @@ public enum Filters {
         )
 
         if case let .string(filterName) = arguments["filterName"] {
+            let extra = Array(args.dropFirst(2))
             return try .array(
                 items.map {
-                    try Interpreter.evaluateFilter(filterName, [$0], kwargs: [:], env: env)
+                    try Interpreter.evaluateFilter(filterName, [$0] + extra, kwargs: [:], env: env)
                 }
             )
         } else if let attribute = arguments["attribute"], attribute != .null {
