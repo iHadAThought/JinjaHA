@@ -21,8 +21,15 @@ An earlier spike depended on huggingface/swift-jinja. That capped statements (`{
 ## Dialect target
 
 - Pallets Jinja **3.1.x** semantics (see [`Docs/COMPAT.md`](../COMPAT.md))
-- HA helpers tracked separately (`JinjaHAInfo.homeAssistantHelpersRevision`)
+- HA helpers tracked separately (`JinjaHAInfo.homeAssistantHelpersRevision` — currently **9**)
+
+## Status (2026-08)
+
+- Public SPM: https://github.com/iHadAThought/JinjaHA — tags through **v0.3.0**
+- Catalog completeness Phases 1–4 shipped; app hybrid wiring is a **separate** consumer project (not this library)
+- Permanent API-fallback (TD-009): HACS / custom Jinja / arbitrary Python
 
 ## Repo
 
-- GitHub: https://github.com/iHadAThought/JinjaHA
+- GitHub (public): https://github.com/iHadAThought/JinjaHA
+- Private mirror: remote name `origin` (see Cursor notes)
