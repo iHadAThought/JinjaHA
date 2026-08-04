@@ -13,7 +13,7 @@ Handoff for the next Cursor agent after a local machine wipe. Keep library work 
 | Item | Value |
 |------|--------|
 | Public SPM | `https://github.com/iHadAThought/JinjaHA.git` `from: "0.3.0"` |
-| Tip commit (library) | `18ec286` — *Ship snapshot DX, hybrid docs, and v0.3.0 validation polish* |
+| Tip commit (library) | `665f19f` — guide handoff (on **v0.3.0** / `18ec286`) |
 | Tags | `v0.1.0` … `v0.3.0` (latest **v0.3.0**) |
 | Helper revision | `JinjaHAInfo.homeAssistantHelpersRevision = 9` |
 | Core revision | `JinjaCoreInfo.implementationRevision = 8` |
