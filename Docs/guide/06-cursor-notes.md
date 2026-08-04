@@ -13,12 +13,12 @@ Handoff for the next Cursor agent after a local machine wipe. Keep library work 
 | Item | Value |
 |------|--------|
 | Public SPM | `https://github.com/iHadAThought/JinjaHA.git` `from: "0.3.0"` |
-| Tip commit (library) | `665f19f` — guide handoff (on **v0.3.0** / `18ec286`) |
+| Tip commit (library) | `841fb7a` — Cursor handoff guide (on **v0.3.0** / `18ec286`) |
 | Tags | `v0.1.0` … `v0.3.0` (latest **v0.3.0**) |
 | Helper revision | `JinjaHAInfo.homeAssistantHelpersRevision = 9` |
 | Core revision | `JinjaCoreInfo.implementationRevision = 8` |
 | Active public branch | `cursor/github-library-release` (tracks public `main`) |
-| Private `origin` | Fast-forward library tip onto `master`; keep lab branch intact |
+| Private `origin` | Prefer branches `main` / `cursor/github-library-release` after wipe; `master` may need a lease force-update (histories diverged after public authorship rewrite) |
 
 ## Remotes (do not confuse)
 
